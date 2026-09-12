@@ -15,7 +15,6 @@ import android.widget.Toast;
 import com.google.android.gms.ads.AdError;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
-import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
@@ -60,6 +59,8 @@ public class MainActivity extends Activity {
                 super.onPageFinished(view,url);
                 hardenCalculatorLayout();
                 view.postDelayed(()->hardenCalculatorLayout(),120);
+                view.postDelayed(()->hardenCalculatorLayout(),600);
+                view.postDelayed(()->hardenCalculatorLayout(),1500);
             }
         });
         webView.setWebChromeClient(new WebChromeClient()); webView.addJavascriptInterface(new AdBridge(),"Android"); webView.loadUrl("file:///android_asset/index.html");
@@ -69,7 +70,7 @@ public class MainActivity extends Activity {
 
     private void hardenCalculatorLayout(){
         if(webView==null)return;
-        String js="javascript:(function(){try{var a=document.getElementById('app');if(a)a.classList.add('basicMode');var s=document.getElementById('__ec_layout_fix');if(!s){s=document.createElement('style');s.id='__ec_layout_fix';s.textContent='#app .keys{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:9px!important;width:100%!important;align-items:stretch!important;align-content:stretch!important}#app .key{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;min-width:0!important;box-sizing:border-box!important}#app .quick{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important}';document.head.appendChild(s);}}catch(e){}})();";
+        String js="javascript:(function(){try{var a=document.getElementById('app');if(a)a.classList.add('basicMode');var s=document.getElementById('__ec_layout_fix');if(!s){s=document.createElement('style');s.id='__ec_layout_fix';s.textContent='#app .merdeka{display:none!important}#app .keys{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:repeat(5,minmax(56px,1fr))!important;gap:9px!important;width:100%!important;height:auto!important;flex:none!important;align-content:stretch!important}#app .key{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;min-width:0!important;min-height:56px!important;height:clamp(56px,9vh,76px)!important;box-sizing:border-box!important}#app .quick{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important}';document.head.appendChild(s);}else{a&&a.classList.add('basicMode');}}catch(e){}})();";
         webView.evaluateJavascript(js,null);
     }
 
