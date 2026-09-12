@@ -12,6 +12,7 @@ import android.webkit.WebViewClient;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.AdError;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
@@ -80,29 +81,16 @@ public class MainActivity extends Activity {
     private void hardenCalculatorLayout(){
         if(webView==null)return;
         String js="javascript:(function(){try{"+
-            "var a=document.getElementById('app');"+
-            "if(a)a.classList.add('basicMode');"+
+            "var a=document.getElementById('app');if(a)a.classList.add('basicMode');"+
             "var s=document.getElementById('__ec_layout_fix');"+
             "if(!s){s=document.createElement('style');s.id='__ec_layout_fix';s.textContent="+
             "'html,body{height:100%!important;margin:0!important;overflow:hidden!important}'+"+
             "'#app{height:100%!important;min-height:100%!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}'+"+
             "'#app .merdeka{display:none!important}'+"+
-            "'#app .keys{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:repeat(5,minmax(0,1fr))!important;gap:9px!important;width:100%!important;flex:1!important;min-height:0!important;align-content:stretch!important}'+"+
+            "'#app .keys{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:repeat(5,minmax(0,1fr))!important;gap:9px!important;width:100%!important;flex:1 1 auto!important;min-height:0!important;align-content:stretch!important}'+"+
             "'#app .key{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;min-width:0!important;height:auto!important;min-height:0!important;box-sizing:border-box!important}'+"+
-            "'#app .quick{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important}'+"+
-            "'.historyActions{display:flex;justify-content:flex-end;gap:6px;margin:-4px 0 10px}'+"+
-            "'.clearHistory{border:1px solid #f0d7bb;background:#fff8f0;color:#b96500;border-radius:10px;padding:7px 10px;font-size:10px;font-weight:800}'+"+
-            "'.historyItemActions{display:flex;justify-content:flex-end;gap:6px;margin-top:8px}'+"+
-            "'.historyItem button{margin-top:0!important;padding:7px 9px!important}'+"+
-            "'.historyItem button.delete{color:#c84b4b;border-color:#f0dada;background:#fffafa}';"+
+            "'#app .quick{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important}';"+
             "document.head.appendChild(s);}"+
-            "var list=document.getElementById('historyList');"+
-            "window.__ecEscape=function(v){return String(v).replace(/[&<>\\\"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','\\\"':'&quot;',\"'\":'&#39;'}[m]})};"+
-            "window.__ecRenderHistory=function(){var el=document.getElementById('historyList');if(!el)return;var d=window.historyData||[];if(!d.length){el.innerHTML='<div class=\"historyEmpty\">Belum ada pengiraan.</div>';return;}el.innerHTML='<div class=\"historyActions\"><button class=\"clearHistory\" onclick=\"window.__ecClearHistory()\">Padam semua</button></div><div class=\"historyList\">'+d.map(function(h,i){return '<div class=\"historyItem\"><b>'+window.__ecEscape(h.expression)+' = '+window.__ecEscape(h.result)+'</b><span>'+window.__ecEscape(h.time||'')+'</span><div class=\"historyItemActions\"><button onclick=\"window.__ecUseHistory('+i+')\">Guna semula</button><button class=\"delete\" onclick=\"window.__ecDeleteHistory('+i+')\">Padam</button></div></div>'}).join('')+'</div>';};"+
-            "window.__ecDeleteHistory=function(i){var d=window.historyData||[];if(i<0||i>=d.length)return;if(!window.confirm('Padam rekod ini?'))return;d.splice(i,1);window.historyData=d;try{localStorage.setItem('easyCalculatorHistory',JSON.stringify(d))}catch(e){}window.__ecRenderHistory()};"+
-            "window.__ecClearHistory=function(){var d=window.historyData||[];if(!d.length)return;if(!window.confirm('Padam semua history pengiraan?'))return;window.historyData=[];try{localStorage.removeItem('easyCalculatorHistory')}catch(e){}window.__ecRenderHistory()};"+
-            "window.__ecUseHistory=function(i){var d=window.historyData||[];if(!d[i])return;window.expr=String(d[i].result);if(window.show)window.show();var o=document.getElementById('historyOverlay');if(o)o.classList.remove('show')};"+
-            "var hb=document.getElementById('historyBtn');if(hb){hb.onclick=function(){window.__ecRenderHistory();var o=document.getElementById('historyOverlay');if(o)o.classList.add('show')}}"+
             "}catch(e){}})();";
         webView.evaluateJavascript(js,null);
     }
