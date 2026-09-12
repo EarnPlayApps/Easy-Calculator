@@ -4,122 +4,43 @@ import android.app.Activity;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.Toast;
-
-import com.google.android.gms.ads.AdError;
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdSize;
-import com.google.android.gms.ads.AdView;
-import com.google.android.gms.ads.FullScreenContentCallback;
-import com.google.android.gms.ads.LoadAdError;
-import com.google.android.gms.ads.MobileAds;
-import com.google.android.gms.ads.interstitial.InterstitialAd;
-import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
-import com.google.android.gms.ads.rewarded.RewardedAd;
-import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
-import com.google.android.ump.ConsentInformation;
-import com.google.android.ump.ConsentRequestParameters;
-import com.google.android.ump.UserMessagingPlatform;
+import com.google.android.gms.ads.*;
+import com.google.android.gms.ads.interstitial.*;
+import com.google.android.gms.ads.rewarded.*;
+import com.google.android.ump.*;
 
 public class MainActivity extends Activity {
-    private static final String LIVE_BANNER="ca-app-pub-9940728659432865/2663696435";
-    private static final String LIVE_INTERSTITIAL="ca-app-pub-9940728659432865/4188531092";
-    private static final String LIVE_REWARDED="ca-app-pub-9940728659432865/2875449427";
-    private static final boolean USE_TEST_ADS=true;
-    private static final String TEST_BANNER="ca-app-pub-3940256099942544/9214589741";
-    private static final String TEST_INTERSTITIAL="ca-app-pub-3940256099942544/1033173712";
-    private static final String TEST_REWARDED="ca-app-pub-3940256099942544/5224354917";
-
-    private WebView webView;
-    private AdView bannerView;
-    private InterstitialAd interstitialAd;
-    private RewardedAd rewardedAd;
-    private ConsentInformation consentInformation;
-    private long lastInterstitialShown=0;
-    private boolean adsStarted=false;
-
-    private String bannerId(){return USE_TEST_ADS?TEST_BANNER:LIVE_BANNER;}
-    private String interstitialId(){return USE_TEST_ADS?TEST_INTERSTITIAL:LIVE_INTERSTITIAL;}
-    private String rewardedId(){return USE_TEST_ADS?TEST_REWARDED:LIVE_REWARDED;}
-
-    @Override protected void onCreate(Bundle state){super.onCreate(state);buildUi();setupConsentAndAds();}
-
-    private void buildUi(){
-        LinearLayout root=new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.rgb(245,247,251));
-        webView=new WebView(this);
-        webView.setVisibility(View.INVISIBLE);
-        WebSettings s=webView.getSettings();
-        s.setJavaScriptEnabled(true);s.setDomStorageEnabled(true);s.setAllowFileAccess(true);s.setAllowContentAccess(false);
-        s.setBuiltInZoomControls(false);s.setDisplayZoomControls(false);
-        webView.setBackgroundColor(Color.rgb(245,247,251));
-        webView.setWebViewClient(new WebViewClient(){@Override public void onPageFinished(WebView v,String u){super.onPageFinished(v,u);patchCalculatorUi();}});
-        webView.setWebChromeClient(new WebChromeClient());
-        webView.addJavascriptInterface(new AdBridge(),"Android");
-        webView.loadUrl("file:///android_asset/index.html");
-        root.addView(webView,new LinearLayout.LayoutParams(-1,0,1f));
-        bannerView=new AdView(this);bannerView.setAdUnitId(bannerId());bannerView.setAdSize(AdSize.BANNER);bannerView.setBackgroundColor(Color.WHITE);
-        root.addView(bannerView,new LinearLayout.LayoutParams(-1,-2));
-        setContentView(root);
-    }
-
-    private void patchCalculatorUi(){
-        if(webView==null)return;
-        String js="javascript:(function(){try{"
-        +"if(document.getElementById('__easy_target_fix'))return;"
-        +"var st=document.createElement('style');st.id='__easy_target_fix';st.textContent="
-        +"'html,body{overflow-x:hidden!important}.top{grid-template-columns:1fr auto!important}.headActions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:6px!important}.headActions .other{display:flex!important;align-items:center!important;gap:5px!important;padding:6px 8px!important;font-size:10px!important;font-weight:650!important;color:#596478!important;background:#fff!important;border:1px solid #e5e9f1!important}.headActions .hamb{width:34px!important;height:34px!important;border-radius:10px!important}.headActions .hamb i{width:16px!important;height:2px!important}.easyOtherIcon{width:17px;height:17px;flex:0 0 auto}.cat .ico,.toolico{border:1px solid rgba(255,255,255,.96)!important;background:linear-gradient(145deg,#fff,#f4f7fb)!important;box-shadow:inset 0 1px #fff,0 7px 16px rgba(30,42,58,.10)!important}.cat .ico svg,.toolico svg{width:20px;height:20px}.cat b{font-size:12px!important}.cat span{font-size:9.5px!important}.historyClear{display:block!important;margin:0 0 8px auto!important;border:1px solid #f0d7bb!important;background:#fff8f0!important;color:#b96500!important;border-radius:9px!important;padding:7px 10px!important;font-size:10px!important;font-weight:800!important}.historyBtns{display:flex!important;gap:6px!important;justify-content:flex-end!important}.menuGrid{display:grid;gap:9px}.menuItem{width:100%;display:grid;grid-template-columns:38px 1fr 16px;gap:10px;align-items:center;border:1px solid #e5e9ef;background:linear-gradient(145deg,#fff,#f7f9fb);border-radius:14px;padding:10px;text-align:left;box-shadow:0 7px 18px rgba(30,42,58,.06)}.menuIcon{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:linear-gradient(145deg,#fff4e9,#fff);color:#d8750a;box-shadow:inset 0 1px #fff,0 6px 14px rgba(30,42,58,.08)}.menuIcon svg{width:20px;height:20px}.menuItem b{font-size:13px}.menuItem span{display:block;color:#6f7a8e;font-size:10px;margin-top:2px}.menuArrow{color:#a1a9b8;font-size:18px}';document.head.appendChild(st);"
-        +"document.querySelectorAll('.merdeka,[class*=merdeka],[id*=merdeka]').forEach(function(e){e.remove()});"
-        +"var mo=new MutationObserver(function(){document.querySelectorAll('.merdeka,[class*=merdeka],[id*=merdeka]').forEach(function(e){e.remove()})});mo.observe(document.body,{childList:true,subtree:true});"
-        +"var top=document.querySelector('.top'),ha=document.querySelector('.headActions'),hamb=document.getElementById('hamb'),other=document.getElementById('other');"
-        +"if(top&&ha&&hamb&&other){if(hamb.parentElement!==ha)ha.appendChild(hamb);other.innerHTML='<svg class=\"easyOtherIcon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"4\" y=\"5\" width=\"16\" height=\"14\" rx=\"3\"/><path d=\"M8 9h8M8 12h5M8 15h7\"/></svg><span>Calculator Lain</span>'; }"
-        +"var svg=function(kind){var p={Basic:'<path d=\"M5 12h14M12 5v14\"/>',Money:'<path d=\"M12 4v16M16 7.5c0-1.7-1.7-2.5-4-2.5s-4 1-4 2.8c0 4.2 8 1.7 8 6 0 1.8-1.7 2.7-4 2.7s-4-.9-4-2.6\"/>',Converter:'<path d=\"M7 7h11l-3-3M17 17H6l3 3M18 7v4M6 13v4\"/>','Date & Time':'<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 7v5l3 2\"/>',Health:'<path d=\"M12 20S4 15.5 4 9.5a3.5 3.5 0 0 1 6.3-2.1L12 9l1.7-1.6A3.5 3.5 0 0 1 20 9.5C20 15.5 12 20 12 20Z\"/>','Home & Daily':'<path d=\"M4 11 12 4l8 7v8H4zM9 19v-5h6v5\"/>',Study:'<path d=\"M4 5h16v14H4zM8 9h8M8 13h6\"/>','Work & Business':'<path d=\"M5 7h14v12H5zM9 7V5h6v2M8 12h8\"/>'};return '<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\">'+(p[kind]||p.Basic)+'</svg>';};"
-        +"var wanted=['Basic','Money','Converter','Date & Time','Health','Home & Daily','Study','Work & Business'];"
-        +"var cats=document.getElementById('catGrid');if(cats){window.__easyWanted=wanted;window.__easyRenderCats=function(){var q=(document.getElementById('catSearch').value||'').toLowerCase();cats.innerHTML=wanted.map(function(n){var c=categories.find(function(x){return x[0]===n});return c&&((c[0]+' '+c[3]).toLowerCase().includes(q))?'<button class=\"cat\" data-cat=\"'+c[0]+'\"><div class=\"ico '+c[2]+'\">'+svg(c[0])+'</div><div><b>'+c[0]+'</b><span>'+c[3]+'</span></div><div class=\"chev\">›</div></button>':''}).join('');cats.querySelectorAll('[data-cat]').forEach(function(b){b.onclick=function(){window.__easyOpenCategory(b.getAttribute('data-cat'))}})};window.__easyOpenCategory=function(name){currentCat=name;document.getElementById('mode').textContent='Calculator · '+name;var co=document.getElementById('catOverlay');if(co)co.classList.remove('show');closeCats();var arr=tools[name]||[];document.getElementById('toolTitle').textContent=name;document.getElementById('toolDesc').textContent='Pilih calculator yang anda perlukan';document.getElementById('toolBody').innerHTML='<div class=\"toolgrid\">'+arr.map(function(t){return '<button class=\"tool\" onclick=\"openTool(\\\''+t[1]+'\\\',\\\''+t[0]+'\\\',\\\''+t[2]+'\\\')\"><div class=\"toolico\">'+svg(name)+'</div><div><b>'+t[0]+'</b><span>'+t[2]+'</span></div><div class=\"toolchev\">›</div></button>'}).join('')+'</div>';document.getElementById('toolOverlay').classList.add('show')};renderCats=function(){window.__easyRenderCats()};filterCats=function(){window.__easyRenderCats()};openCat=function(name){window.__easyOpenCategory(name)};window.__easyRenderCats();}"
-        +"var hb=document.getElementById('historyBtn'),ho=document.getElementById('historyOverlay'),hl=document.getElementById('historyList');if(hb&&hl){hb.onclick=function(){var arr=Array.isArray(historyItems)?historyItems:[];hl.innerHTML='<button class=\"historyClear\" id=\"easyClearHistory\">Padam semua</button>'+(arr.length?arr.map(function(h,i){var a=h&&((h.expr)||h.expression)||'',r=h&&((h.result)||h.value)||'';return '<div class=\"historyItem\"><b>'+String(a)+'</b><span>= '+String(r)+'</span><div class=\"historyBtns\"><button data-use=\"'+i+'\">Guna semula</button><button data-del=\"'+i+'\">Padam</button></div></div>'}).join(''):'<div class=\"historyEmpty\">Belum ada sejarah pengiraan.</div>');var cl=document.getElementById('easyClearHistory');if(cl)cl.onclick=function(){if(Array.isArray(historyItems))historyItems.splice(0,historyItems.length);try{for(var i=localStorage.length-1;i>=0;i--){var k=localStorage.key(i);if(k&&/history/i.test(k))localStorage.removeItem(k)}}catch(e){}try{for(var j=sessionStorage.length-1;j>=0;j--){var sk=sessionStorage.key(j);if(sk&&/history/i.test(sk))sessionStorage.removeItem(sk)}}catch(e){}hb.click()};hl.querySelectorAll('[data-del]').forEach(function(b){b.onclick=function(){historyItems.splice(Number(b.dataset.del),1);hb.click()}});hl.querySelectorAll('[data-use]').forEach(function(b){b.onclick=function(){var h=historyItems[Number(b.dataset.use)];if(h){var v=h.expr||h.expression||'';if(typeof setExpr==='function')setExpr(String(v));else{expr=String(v);if(document.getElementById('expr'))document.getElementById('expr').textContent=expr}ho.classList.remove('show')}}});ho.classList.add('show')};}"
-        +"if(hamb){var oldHamb=hamb.onclick;hamb.onclick=function(){var mo=document.getElementById('menuOverlay');if(mo)mo.classList.add('show');else if(oldHamb)oldHamb()}}"
-        +"var mo2=document.getElementById('menuOverlay');if(!mo2){mo2=document.createElement('div');mo2.id='menuOverlay';mo2.className='overlay';mo2.innerHTML='<div class=\"modal\"><div class=\"mhead\"><div><h2>Menu</h2><p>Fungsi tambahan Easy Calculator</p></div><button class=\"close\" id=\"ecMenuClose\">×</button></div><div class=\"menuGrid\"><button class=\"menuItem\" id=\"ecSettings\"><div class=\"menuIcon\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M19 13.5v-3l-2-.7-.7-1.7.9-1.9-2.1-2.1-1.9.9-1.7-.7-.7-2h-3l-.7 2-1.7.7-1.9-.9L3.4 6.2l.9 1.9-.7 1.7-2 .7v3l2 .7.7 1.7-.9 1.9 2.1 2.1 1.9-.9 1.7.7.7 2h3l.7-2 1.7-.7 1.9.9 2.1-2.1-.9-1.9.7-1.7z\"/></svg></div><div><b>Tetapan</b><span>Pilihan aplikasi</span></div><div class=\"menuArrow\">›</div></button><button class=\"menuItem\" id=\"ecPrivacy\"><div class=\"menuIcon\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"><path d=\"M12 4 19 7v5c0 4.2-2.9 7.3-7 8-4.1-.7-7-3.8-7-8V7z\"/><path d=\"m9 12 2 2 4-4\"/></svg></div><div><b>Privasi</b><span>Pilihan privasi iklan</span></div><div class=\"menuArrow\">›</div></button><button class=\"menuItem\" id=\"ecAbout\"><div class=\"menuIcon\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"><circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 11v5M12 8h.01\"/></svg></div><div><b>Tentang Easy Calculator</b><span>Calculator mudah untuk kegunaan harian</span></div><div class=\"menuArrow\">›</div></button></div></div>';document.body.appendChild(mo2);document.getElementById('ecMenuClose').onclick=function(){mo2.classList.remove('show')};document.getElementById('ecSettings').onclick=function(){mo2.classList.remove('show');alert('Tetapan Easy Calculator akan tersedia di sini tanpa mengubah calculator utama.')};document.getElementById('ecPrivacy').onclick=function(){mo2.classList.remove('show');if(window.Android&&Android.showPrivacyOptions)Android.showPrivacyOptions()};document.getElementById('ecAbout').onclick=function(){mo2.classList.remove('show');alert('Easy Calculator ialah calculator ringkas untuk kegunaan harian.')};}"
-        +"}catch(e){console.log('Easy Calculator targeted patch',e);}})();";
-        webView.evaluateJavascript(js,(value)->webView.setVisibility(View.VISIBLE));
-    }
-
-    private void setupConsentAndAds(){
-        consentInformation=UserMessagingPlatform.getConsentInformation(this);
-        ConsentRequestParameters params=new ConsentRequestParameters.Builder().build();
-        consentInformation.requestConsentInfoUpdate(this,params,()->{
-            UserMessagingPlatform.loadAndShowConsentFormIfRequired(this,error->{updatePrivacyButton();startAdsIfAllowed();});
-            updatePrivacyButton();startAdsIfAllowed();
-        },error->{updatePrivacyButton();startAdsIfAllowed();});
-    }
-
-    private void updatePrivacyButton(){
-        if(webView==null||consentInformation==null)return;
-        boolean req=consentInformation.getPrivacyOptionsRequirementStatus()==ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED;
-        webView.post(()->webView.evaluateJavascript("(function(){var b=document.getElementById('privacyBtn');if(b)b.style.display="+(req?"'inline-block'":"'none'")+";})();",null));
-    }
-    private void startAdsIfAllowed(){if(adsStarted||consentInformation==null||!consentInformation.canRequestAds())return;adsStarted=true;MobileAds.initialize(this,status->{loadBanner();loadInterstitial();loadRewarded();});}
-    private void loadBanner(){if(bannerView!=null)bannerView.loadAd(new AdRequest.Builder().build());}
-    private void loadInterstitial(){InterstitialAd.load(this,interstitialId(),new AdRequest.Builder().build(),new InterstitialAdLoadCallback(){@Override public void onAdLoaded(InterstitialAd ad){interstitialAd=ad;ad.setFullScreenContentCallback(new FullScreenContentCallback(){@Override public void onAdDismissedFullScreenContent(){interstitialAd=null;loadInterstitial();}@Override public void onAdFailedToShowFullScreenContent(AdError e){interstitialAd=null;loadInterstitial();}});}@Override public void onAdFailedToLoad(LoadAdError e){interstitialAd=null;}});}
-    private void loadRewarded(){RewardedAd.load(this,rewardedId(),new AdRequest.Builder().build(),new RewardedAdLoadCallback(){@Override public void onAdLoaded(RewardedAd ad){rewardedAd=ad;ad.setFullScreenContentCallback(new FullScreenContentCallback(){@Override public void onAdDismissedFullScreenContent(){rewardedAd=null;loadRewarded();}@Override public void onAdFailedToShowFullScreenContent(AdError e){rewardedAd=null;loadRewarded();}});}@Override public void onAdFailedToLoad(LoadAdError e){rewardedAd=null;}});}
-    private void showRewarded(){if(rewardedAd==null){Toast.makeText(this,"Rewarded sedang disediakan. Cuba lagi sebentar.",Toast.LENGTH_SHORT).show();loadRewarded();return;}RewardedAd ad=rewardedAd;rewardedAd=null;ad.show(this,item->Toast.makeText(this,"Reward diterima: 1",Toast.LENGTH_SHORT).show());}
-    private void showInterstitial(){long now=SystemClock.elapsedRealtime();if(now-lastInterstitialShown<300000L||interstitialAd==null)return;lastInterstitialShown=now;InterstitialAd ad=interstitialAd;interstitialAd=null;ad.show(this);}
-    private void showPrivacyOptions(){
-        if(consentInformation==null)return;
-        if(consentInformation.getPrivacyOptionsRequirementStatus()!=ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED){Toast.makeText(this,"Pilihan privasi tidak diperlukan pada masa ini.",Toast.LENGTH_SHORT).show();return;}
-        try{UserMessagingPlatform.showPrivacyOptionsForm(this,error->{if(error!=null)Toast.makeText(this,"Privacy Options tidak dapat dibuka sekarang.",Toast.LENGTH_SHORT).show();updatePrivacyButton();});}catch(Exception e){Toast.makeText(this,"Privacy Options tidak dapat dibuka sekarang.",Toast.LENGTH_SHORT).show();}
-    }
-
-    public class AdBridge{
-        @JavascriptInterface public void showRewardedAd(){runOnUiThread(()->showRewarded());}
-        @JavascriptInterface public void onNaturalTransition(){runOnUiThread(()->showInterstitial());}
-        @JavascriptInterface public void showPrivacyOptions(){runOnUiThread(()->MainActivity.this.showPrivacyOptions());}
-    }
+ private static final String B="ca-app-pub-3940256099942544/9214589741",I="ca-app-pub-3940256099942544/1033173712",R="ca-app-pub-3940256099942544/5224354917";
+ private WebView w; private AdView banner; private InterstitialAd inter; private RewardedAd reward; private ConsentInformation consent; private long lastInter; private boolean ads;
+ @Override protected void onCreate(Bundle b){super.onCreate(b);ui();consent();}
+ private void ui(){LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(Color.rgb(245,247,251));w=new WebView(this);w.setVisibility(View.INVISIBLE);WebSettings s=w.getSettings();s.setJavaScriptEnabled(true);s.setDomStorageEnabled(true);s.setAllowFileAccess(true);s.setAllowContentAccess(false);w.setWebViewClient(new WebViewClient(){@Override public void onPageFinished(WebView v,String u){patch();}});w.setWebChromeClient(new WebChromeClient());w.addJavascriptInterface(new Bridge(),"Android");w.loadUrl("file:///android_asset/index.html");root.addView(w,new LinearLayout.LayoutParams(-1,0,1));banner=new AdView(this);banner.setAdUnitId(B);banner.setAdSize(AdSize.BANNER);root.addView(banner,new LinearLayout.LayoutParams(-1,-2));setContentView(root);}
+ private void patch(){String js="javascript:(function(){try{if(document.getElementById('__ec_v2'))return;var s=document.createElement('style');s.id='__ec_v2';s.textContent="+
+ "'html,body{overflow-x:hidden!important}.top{grid-template-columns:1fr auto!important}.brand{display:flex!important;align-items:center!important;gap:8px!important}.easyBrandLogo{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:#fff4e9;color:#f28a16;border:1px solid #f5d5b2;box-shadow:0 5px 14px rgba(23,32,51,.08);flex:none}.easyBrandLogo svg{width:18px;height:18px}.basicMode .key.zero{grid-column:span 2!important}.smartInfo{margin-top:12px!important;padding:10px 12px!important;border:1px solid #e5e9f1!important;background:#fff!important;border-radius:13px!important;box-shadow:0 6px 18px rgba(23,32,51,.05)!important;display:flex!important;align-items:center!important;gap:9px!important}.smartInfoIcon{width:30px;height:30px;border-radius:9px;background:#fff4e9;color:#d8750a;display:grid;place-items:center}.smartInfoText b{display:block;font-size:11px;color:#344057}.smartInfoText span{display:block;margin-top:2px;color:#7b8495;font-size:10px;line-height:1.3}.toolBack{width:36px;height:36px;border:1px solid #e5e9f1;background:#f7f8fb;border-radius:50%;display:grid;place-items:center;color:#596478;margin-right:5px}.toolHeadLeft{display:flex;align-items:flex-start;min-width:0}.toolHeadLeft>div:last-child{min-width:0}';document.head.appendChild(s);"+
+ "document.querySelectorAll('.merdeka,[class*=merdeka],[id*=merdeka]').forEach(function(e){e.remove()});"+
+ "var top=document.querySelector('.top'),ha=document.querySelector('.headActions'),hamb=document.getElementById('hamb'),brand=document.querySelector('.brand');if(ha&&hamb&&hamb.parentElement!==ha)ha.appendChild(hamb);if(brand&&!brand.querySelector('.easyBrandLogo'))brand.insertAdjacentHTML('afterbegin','<div class=\"easyBrandLogo\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"4\" y=\"3\" width=\"16\" height=\"18\" rx=\"3\"/><path d=\"M8 7h8M8 11h3M13 11h3M8 15h3M13 15h3M8 19h8\"/></svg></div>');"+
+ "var ks=document.querySelector('.keys');if(ks&&!ks.querySelector('.zero')){var p=ks.querySelector(\"[onclick=\\\"input('(')\\\"]\");if(p){p.remove();var z=ks.querySelector(\"[onclick=\\\"input('0')\\\"]\");if(z)z.classList.add('zero')}}"+
+ "var n=document.querySelector('.note');if(n&&!document.querySelector('.smartInfo'))n.insertAdjacentHTML('beforebegin','<div class=\"smartInfo\"><div class=\"smartInfoIcon\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\"><path d=\"M9 18h6M10 21h4M8.5 14.5A6 6 0 1 1 15.5 14.5c-.8.7-1.2 1.5-1.4 2.5H9.9c-.2-1-.6-1.8-1.4-2.5Z\"/><path d=\"M12 5v2M5.6 7.6 7 9M18.4 7.6 17 9\"/></svg></div><div class=\"smartInfoText\"><b>Smart Tip</b><span>Tekan % untuk kira peratus dengan cepat, atau buka Calculator Lain untuk pengiraan khusus.</span></div></div>');"+
+ "var svg=function(k){var p={Basic:'<path d=\"M5 12h14M12 5v14\"/>',Money:'<path d=\"M12 4v16M16 7.5c0-1.7-1.7-2.5-4-2.5s-4 1-4 2.8c0 4.2 8 1.7 8 6 0 1.8-1.7 2.7-4 2.7s-4-.9-4-2.6\"/>',Converter:'<path d=\"M7 7h11l-3-3M17 17H6l3 3M18 7v4M6 13v4\"/>','Date & Time':'<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 7v5l3 2\"/>',Health:'<path d=\"M12 20S4 15.5 4 9.5a3.5 3.5 0 0 1 6.3-2.1L12 9l1.7-1.6A3.5 3.5 0 0 1 20 9.5C20 15.5 12 20 12 20Z\"/>','Home & Daily':'<path d=\"M4 11 12 4l8 7v8H4zM9 19v-5h6v5\"/>',Study:'<path d=\"M4 5h16v14H4zM8 9h8M8 13h6\"/>','Work & Business':'<path d=\"M5 7h14v12H5zM9 7V5h6v2M8 12h8\"/>'};return '<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\">'+(p[k]||p.Basic)+'</svg>'};"+
+ "var wanted=['Basic','Money','Converter','Date & Time','Health','Home & Daily','Study','Work & Business'],cg=document.getElementById('catGrid')||document.getElementById('cats');window.__ecCats=function(){if(!cg)return;var q=((document.getElementById('catSearch')||document.getElementById('search'))?.value||'').toLowerCase();cg.innerHTML=wanted.map(function(n){var c=categories.find(function(x){return x[0]===n});return c&&((c[0]+' '+c[3]).toLowerCase().includes(q))?'<button class=\"cat\" data-cat=\"'+c[0]+'\"><div class=\"ico '+c[2]+'\">'+svg(c[0])+'</div><div><b>'+c[0]+'</b><span>'+c[3]+'</span></div><div class=\"chev\">›</div></button>':''}).join('');cg.querySelectorAll('[data-cat]').forEach(function(b){b.onclick=function(){__ecOpen(b.dataset.cat)}})};window.__ecOpen=function(name){var arr=tools[name]||[],to=document.getElementById('toolOverlay'),tt=document.getElementById('toolTitle'),td=document.getElementById('toolDesc'),body=document.getElementById('toolBody');document.getElementById('catOverlay')?.classList.remove('show');currentCat=name;var mh=to?.querySelector('.mhead');if(mh&&!document.getElementById('toolBack')){var x=mh.querySelector('.close');var old=mh.firstElementChild;var wrap=document.createElement('div');wrap.className='toolHeadLeft';var back=document.createElement('button');back.id='toolBack';back.className='toolBack';back.innerHTML='<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 18l-6-6 6-6\"/></svg>';back.onclick=function(){to.classList.remove('show');document.getElementById('catOverlay')?.classList.add('show');__ecCats()};mh.insertBefore(wrap,old);wrap.appendChild(back);wrap.appendChild(old)}if(tt)tt.textContent=name;if(td)td.textContent='Pilih calculator yang anda perlukan';if(body)body.innerHTML='<div class=\"toolgrid\">'+arr.map(function(t){return '<button class=\"tool\" onclick=\"openTool(\\\''+t[1]+'\\\',\\\''+t[0]+'\\\')\"><div class=\"toolico\">'+svg(name)+'</div><div><b>'+t[0]+'</b><span>'+t[2]+'</span></div><div class=\"toolchev\">›</div></button>'}).join('')+'</div>';to.classList.add('show')};window.renderCats=__ecCats;window.filterCats=__ecCats;window.openCat=__ecOpen;__ecCats();"+
+ "var hb=document.getElementById('historyBtn'),hl=document.getElementById('historyList');if(hb&&hl){hb.onclick=function(){var a=Array.isArray(historyItems)?historyItems:[];hl.innerHTML='<button class=\"historyClear\" id=\"ecClearHistory\">Padam semua</button>'+(a.length?a.map(function(h,i){return '<div class=\"historyItem\"><b>'+String(h.title||'Basic')+'</b><span>'+String(h.result||'')+'</span><div class=\"historyBtns\"><button data-del=\"'+i+'\">Padam</button></div></div>'}).join(''):'<div class=\"historyEmpty\">Belum ada pengiraan.</div>');var c=document.getElementById('ecClearHistory');if(c)c.onclick=function(){historyItems.splice(0,historyItems.length);hb.onclick();};hl.querySelectorAll('[data-del]').forEach(function(b){b.onclick=function(){historyItems.splice(+b.dataset.del,1);hb.onclick()}});document.getElementById('historyOverlay').classList.add('show')}}"+
+ "var h=document.getElementById('hamb');if(h){h.onclick=function(){var m=document.getElementById('menuOverlay');if(m)m.classList.add('show')}}"+
+ "}catch(e){console.log('Easy Calculator UI patch',e)}})();";
+ w.evaluateJavascript(js,v->w.setVisibility(View.VISIBLE));}
+ private void consent(){consent=UserMessagingPlatform.getConsentInformation(this);consent.requestConsentInfoUpdate(this,new ConsentRequestParameters.Builder().build(),()->UserMessagingPlatform.loadAndShowConsentFormIfRequired(this,e->{privacy();ads();}),e->{privacy();ads();});}
+ private void privacy(){if(w==null||consent==null)return;boolean r=consent.getPrivacyOptionsRequirementStatus()==ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED;w.evaluateJavascript("(function(){var b=document.getElementById('privacyBtn');if(b)b.style.display="+(r?"'inline-block'":"'none'")+"})()",null);}
+ private void ads(){if(ads||consent==null||!consent.canRequestAds())return;ads=true;MobileAds.initialize(this,s->{banner.loadAd(new AdRequest.Builder().build());loadInter();loadReward();});}
+ private void loadInter(){InterstitialAd.load(this,I,new AdRequest.Builder().build(),new InterstitialAdLoadCallback(){public void onAdLoaded(InterstitialAd a){inter=a;a.setFullScreenContentCallback(new FullScreenContentCallback(){public void onAdDismissedFullScreenContent(){inter=null;loadInter();}});}public void onAdFailedToLoad(LoadAdError e){inter=null;}});}
+ private void loadReward(){RewardedAd.load(this,R,new AdRequest.Builder().build(),new RewardedAdLoadCallback(){public void onAdLoaded(RewardedAd a){reward=a;}public void onAdFailedToLoad(LoadAdError e){reward=null;}});}
+ private void showReward(){if(reward==null){Toast.makeText(this,"Rewarded sedang disediakan.",Toast.LENGTH_SHORT).show();loadReward();return;}RewardedAd a=reward;reward=null;a.show(this,x->Toast.makeText(this,"Reward diterima: 1",Toast.LENGTH_SHORT).show());}
+ private void showInter(){if(inter==null||SystemClock.elapsedRealtime()-lastInter<300000)return;lastInter=SystemClock.elapsedRealtime();InterstitialAd a=inter;inter=null;a.show(this);}
+ private void showPrivacy(){if(consent!=null&&consent.getPrivacyOptionsRequirementStatus()==ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED)UserMessagingPlatform.showPrivacyOptionsForm(this,e->privacy());}
+ public class Bridge{@JavascriptInterface public void showRewardedAd(){runOnUiThread(()->showReward());}@JavascriptInterface public void onNaturalTransition(){runOnUiThread(()->showInter());}@JavascriptInterface public void showPrivacyOptions(){runOnUiThread(()->showPrivacy());}}
 }
