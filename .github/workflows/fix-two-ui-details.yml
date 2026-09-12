@@ -20,28 +20,28 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           p = Path('app/src/main/assets/index.html')
           s = p.read_text(encoding='utf-8')
 
           # Remove only the Calculator Lain search field.
-          import re
-          s, n = re.subn(r'<input[^>]*class="search"[^>]*>', '', s, count=1)
+          s, n = re.subn(r'<input[^>]*class=["\']search["\'][^>]*>', '', s, count=1)
           if n != 1:
               raise SystemExit('Expected Calculator Lain search input was not found exactly once')
 
-          # Make History use the same compact pill treatment as Calculator Lain.
-          old_css = '.historyBtn{width:34px;height:34px;border:1px solid var(--line);background:#fff;border-radius:10px;color:#536078;font-size:18px;font-weight:900;display:grid;place-items:center;box-shadow:0 5px 16px #1720330a}.historyBtn:active{transform:translateY(1px)}.historyBtn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}'
-          new_css = '.historyBtn{border:1px solid #f0d7bb;background:#fff8f0;color:#b96500;border-radius:999px;padding:8px 11px;font-size:11px;font-weight:800;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:5px;box-shadow:none}.historyBtn:active{transform:translateY(1px)}.historyBtn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}'
-          if old_css not in s:
-              raise SystemExit('Expected History button CSS was not found')
-          s = s.replace(old_css, new_css, 1)
+          # Make History visually match the existing Calculator Lain pill.
+          pattern = r'\.historyBtn\{[^}]*\}\.historyBtn:active\{[^}]*\}\.historyBtn svg\{[^}]*\}'
+          replacement = '.historyBtn{border:1px solid #f0d7bb;background:#fff8f0;color:#b96500;border-radius:999px;padding:8px 11px;font-size:11px;font-weight:800;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:5px;box-shadow:none}.historyBtn:active{transform:translateY(1px)}.historyBtn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}'
+          s, n = re.subn(pattern, replacement, s, count=1)
+          if n != 1:
+              raise SystemExit('Expected History button CSS was not found exactly once')
 
-          # Add the History label while preserving its existing SVG icon.
-          old_btn = '<button class="historyBtn" id="historyBtn" aria-label="History"><svg'
-          new_btn = '<button class="historyBtn" id="historyBtn" aria-label="History"><svg'
-          if old_btn not in s:
+          # Keep the existing history icon and add a small text label.
+          old = '</svg></button><button class="other" id="other">Calculator Lain</button>'
+          new = '</svg><span>History</span></button><button class="other" id="other">Calculator Lain</button>'
+          if old not in s:
               raise SystemExit('Expected History button markup was not found')
-          s = s.replace('</svg></button><button class="other" id="other">Calculator Lain</button>', '</svg><span>History</span></button><button class="other" id="other">Calculator Lain</button>', 1)
+          s = s.replace(old, new, 1)
 
           p.write_text(s, encoding='utf-8')
           PY
