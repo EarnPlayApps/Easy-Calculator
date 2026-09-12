@@ -18,7 +18,7 @@ import com.google.android.gms.ads.rewarded.*;
 import com.google.android.ump.*;
 
 public class MainActivity extends Activity {
- private static final String B="ca-app-pub-3940256099942544/9214589741",I="ca-app-pub-3940256099942544/1033173712",R="ca-app-pub-3940256099942544/5224354917";
+ private static final String B=BuildConfig.DEBUG?"ca-app-pub-3940256099942544/9214589741":"ca-app-pub-9940728659432865/2663696435",I=BuildConfig.DEBUG?"ca-app-pub-3940256099942544/1033173712":"ca-app-pub-9940728659432865/4188531092",R=BuildConfig.DEBUG?"ca-app-pub-3940256099942544/5224354917":"ca-app-pub-9940728659432865/2875449427";
  private WebView w; private AdView banner; private InterstitialAd inter; private RewardedAd reward; private ConsentInformation consent; private long lastInter; private boolean ads;
  @Override protected void onCreate(Bundle b){super.onCreate(b);ui();consent();}
  private void ui(){LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(Color.rgb(245,247,251));w=new WebView(this);w.setVisibility(View.INVISIBLE);WebSettings s=w.getSettings();s.setJavaScriptEnabled(true);s.setDomStorageEnabled(true);s.setAllowFileAccess(true);s.setAllowContentAccess(false);w.setWebViewClient(new WebViewClient(){@Override public void onPageFinished(WebView v,String u){patch();}});w.setWebChromeClient(new WebChromeClient());w.addJavascriptInterface(new Bridge(),"Android");w.loadUrl("file:///android_asset/index.html");root.addView(w,new LinearLayout.LayoutParams(-1,0,1));banner=new AdView(this);banner.setAdUnitId(B);banner.setAdSize(AdSize.BANNER);root.addView(banner,new LinearLayout.LayoutParams(-1,-2));setContentView(root);}
