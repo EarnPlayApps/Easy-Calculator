@@ -29,19 +29,18 @@ jobs:
           if n != 1:
               raise SystemExit('Expected Calculator Lain search input was not found exactly once')
 
-          # Make History visually match the existing Calculator Lain pill.
-          pattern = r'\.historyBtn\{[^}]*\}\.historyBtn:active\{[^}]*\}\.historyBtn svg\{[^}]*\}'
-          replacement = '.historyBtn{border:1px solid #f0d7bb;background:#fff8f0;color:#b96500;border-radius:999px;padding:8px 11px;font-size:11px;font-weight:800;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:5px;box-shadow:none}.historyBtn:active{transform:translateY(1px)}.historyBtn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}'
-          s, n = re.subn(pattern, replacement, s, count=1)
-          if n != 1:
-              raise SystemExit('Expected History button CSS was not found exactly once')
-
-          # Keep the existing history icon and add a small text label.
-          old = '</svg></button><button class="other" id="other">Calculator Lain</button>'
-          new = '</svg><span>History</span></button><button class="other" id="other">Calculator Lain</button>'
-          if old not in s:
-              raise SystemExit('Expected History button markup was not found')
-          s = s.replace(old, new, 1)
+          # Override only the History button so it uses the same compact pill treatment as Calculator Lain.
+          style = '''<style id="easy-history-match">
+          #historyBtn{border:1px solid #f0d7bb!important;background:#fff8f0!important;color:#b96500!important;border-radius:999px!important;padding:8px 11px!important;width:auto!important;height:34px!important;font-size:11px!important;font-weight:800!important;white-space:nowrap!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;box-shadow:none!important}
+          #historyBtn:active{transform:translateY(1px)}
+          #historyBtn svg{width:14px!important;height:14px!important;fill:none!important;stroke:currentColor!important;stroke-width:1.9!important;stroke-linecap:round!important;stroke-linejoin:round!important}
+          #historyBtn::after{content:"History";display:inline-block;font-size:11px;font-weight:800;line-height:1}
+          </style>'''
+          s = re.sub(r'<style id="easy-history-match">.*?</style>', '', s, flags=re.S)
+          marker = '</head>'
+          if marker not in s:
+              raise SystemExit('HTML head marker not found')
+          s = s.replace(marker, style + marker, 1)
 
           p.write_text(s, encoding='utf-8')
           PY
