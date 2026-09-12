@@ -38,9 +38,19 @@ jobs:
       - name: Build debug APK
         run: gradle assembleDebug --stacktrace
 
-      - name: Upload APK
+      - name: Build release APK (real AdMob)
+        run: gradle assembleRelease --stacktrace
+
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: easy-calculator-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload personal AdMob APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Easy-Calculator-Personal-AdMob
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
