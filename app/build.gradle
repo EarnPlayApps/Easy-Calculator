@@ -1,6 +1,7 @@
 plugins { id 'com.android.application' }
 
 android { namespace 'com.earnplayapps.easycalculator'; compileSdk 36
+    buildFeatures { buildConfig true }
     defaultConfig { applicationId 'com.earnplayapps.easycalculator'; minSdk 23; targetSdk 36; versionCode 1; versionName '1.0' }
 }
 
