@@ -1,0 +1,62 @@
+name: Easy Calculator Compliance Finalizer
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  finalize:
+    if: !contains(github.event.head_commit.message, 'Finalize Easy Calculator compliance')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch compliance content
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/assets/index.html')
+          s=p.read_text()
+          s=s.replace('<div class="merdeka"><div class="merdekaText"><strong>Selamat Hari Kebangsaan ke-69</strong><span>Malaysia • 31 Ogos 2026 • Salam Merdeka</span></div></div>','')
+          if 'id="ecPrivacyOverlay"' not in s:
+              insert='''<button id="ecPrivacyLink" type="button" style="border:0;background:none;color:#71809a;font-size:10px;text-decoration:underline;margin-left:8px">Privacy Policy</button>'''
+              s=s.replace('<button id="privacyBtn" class="hidden" style="border:0;background:none;color:#71809a;font-size:10px" type="button">Privacy Options</button>','<button id="privacyBtn" class="hidden" style="border:0;background:none;color:#71809a;font-size:10px" type="button">Privacy Options</button>'+insert)
+              overlay='''<div class="overlay" id="ecPrivacyOverlay"><div class="modal"><div class="mhead"><div><h2>Privacy Policy</h2><p>Easy Calculator · EarnPlayApps</p></div><button class="close" id="ecPrivacyClose">×</button></div><div style="color:#4f5b70;font-size:12px;line-height:1.55"><p><b>Last updated: 12 September 2026</b></p><p>Easy Calculator is a calculator application by EarnPlayApps. The app does not require an account and is designed to perform calculations on the device.</p><p><b>Data handled by Easy Calculator</b></p><ul><li>Calculator inputs and calculation history are processed/stored locally on the device and are not uploaded by Easy Calculator to a developer server.</li><li>The app does not request your name, contacts, phone number, precise location, photos, microphone or camera.</li><li>Health calculator inputs such as age, height and weight are used only to calculate the requested estimate on the device.</li></ul><p><b>Advertising and third-party services</b></p><p>Easy Calculator uses Google Mobile Ads (AdMob) and the Google User Messaging Platform (UMP). Google and its advertising partners may process device, advertising, usage, diagnostics and consent-related information as described in their policies. Ad requests may use information such as IP address, device identifiers and approximate location for advertising, security, measurement and related purposes.</p><p><b>Consent</b></p><p>Where consent is required, UMP is used to present the applicable consent choices. Users can manage available privacy choices through the app's Privacy Options entry when provided by Google.</p><p><b>History and deletion</b></p><p>Calculation history is stored locally. You can delete individual history entries or clear all history from the History screen. Uninstalling the app removes its local app data according to Android device behavior.</p><p><b>Health information disclaimer</b></p><p>Health calculators are informational estimates only and are not medical advice, diagnosis or treatment. Do not rely on the results for medical decisions; consult a qualified healthcare professional when appropriate.</p><p><b>Financial and other calculator disclaimer</b></p><p>Money, tax, loan, business, construction and other calculations are estimates based on the values and assumptions entered. Verify important results with the relevant official source or qualified professional before making consequential decisions.</p><p><b>Children</b></p><p>Easy Calculator is not designed specifically for children. The target audience and advertising settings must be declared accurately in Google Play Console. If the target audience is changed to include children, additional Google Play Families requirements apply.</p><p><b>Privacy contact</b></p><p>For privacy questions, use the developer contact information published with the Easy Calculator listing on Google Play. The privacy policy and Data safety information must be kept consistent with the actual data practices and third-party SDKs used by the app.</p><p><b>External policies</b></p><p>Google's own privacy, advertising and consent policies apply to Google's services integrated into the app. Easy Calculator does not control third-party data processing.</p><p><b>Changes</b></p><p>This policy may be updated when the app, SDKs, advertising configuration or legal requirements change.</p></div></div></div>'''
+              s=s.replace('</body>',overlay+'</body>')
+              js='''<script>(function(){var l=document.getElementById('ecPrivacyLink'),o=document.getElementById('ecPrivacyOverlay'),c=document.getElementById('ecPrivacyClose');if(l&&o){l.addEventListener('click',function(){o.classList.add('show')});c&&c.addEventListener('click',function(){o.classList.remove('show')});o.addEventListener('click',function(e){if(e.target===o)o.classList.remove('show')})}var h=document.getElementById('toolOverlay');if(h){var mo=new MutationObserver(function(){if(h.classList.contains('show')){var title=(document.getElementById('toolTitle')||{}).textContent||'';var body=document.getElementById('toolBody');if(body&&/BMI|BMR|TDEE|Ideal Weight|Water Intake|Pace/i.test(title)&&!body.querySelector('.healthDisclaimer')){var d=document.createElement('div');d.className='healthDisclaimer';d.textContent='Maklumat ini ialah anggaran umum sahaja, bukan diagnosis atau nasihat perubatan.';body.insertBefore(d,body.firstChild)}}});mo.observe(h,{attributes:true,attributeFilter:['class']})}})();</script>'''
+              s=s.replace('</body>',js+'</body>')
+          if '.healthDisclaimer{' not in s:
+              s=s.replace('</style></head>',' .healthDisclaimer{padding:9px 10px;margin-bottom:10px;border:1px solid #f0d7bb;background:#fff8f0;color:#8a5a20;border-radius:10px;font-size:10px;line-height:1.35}</style></head>')
+          p.write_text(s)
+          
+          # Privacy policy web page for GitHub Pages/static hosting.
+          Path('docs').mkdir(exist_ok=True)
+          policy='''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Easy Calculator Privacy Policy</title><style>body{font:16px system-ui,sans-serif;line-height:1.65;max-width:820px;margin:0 auto;padding:32px;color:#172033;background:#f5f7fb}main{background:#fff;border:1px solid #e5e9f1;border-radius:18px;padding:24px}h1{margin-top:0}h2{margin-top:26px}li{margin:6px 0}</style></head><body><main><h1>Easy Calculator Privacy Policy</h1><p><b>Last updated: 12 September 2026</b></p><p>Easy Calculator is a calculator application by EarnPlayApps.</p><h2>Data handled by the app</h2><ul><li>No account is required.</li><li>Calculator inputs and calculation history are processed/stored locally by the app and are not uploaded by Easy Calculator to a developer server.</li><li>The app does not request names, contacts, phone numbers, precise location, photos, microphone or camera.</li><li>Health calculator inputs are used for on-device estimates and are not intentionally transmitted by Easy Calculator to a developer server.</li></ul><h2>Advertising and Google services</h2><p>The app uses Google Mobile Ads (AdMob) and Google User Messaging Platform (UMP). Google and its partners may process device, advertising, usage, diagnostics and consent-related information according to their policies. Depending on consent and regional requirements, advertising may involve information such as IP address, device identifiers and approximate location.</p><h2>Consent and privacy choices</h2><p>Where required, UMP presents consent choices. Available privacy choices can be accessed through the app's Privacy Options entry when provided by Google.</p><h2>Local history and deletion</h2><p>History is stored locally. Users can delete individual entries or clear all history. Uninstalling the app removes its local app data according to Android behavior.</p><h2>Health disclaimer</h2><p>Health calculators are informational estimates only and are not medical advice, diagnosis or treatment. Consult a qualified healthcare professional for medical decisions.</p><h2>Financial and other calculator disclaimer</h2><p>Money, tax, loan, business, construction and other calculations are estimates based on the entered values and assumptions. Verify important results with relevant official sources or qualified professionals.</p><h2>Children</h2><p>Easy Calculator is not designed specifically for children. Google Play target-audience and advertising declarations must accurately reflect the actual intended audience.</p><h2>Privacy contact</h2><p>For privacy questions, use the developer contact information published with the Easy Calculator listing on Google Play.</p><h2>Third parties</h2><p>Google services and other third-party services have their own privacy policies and data practices. Easy Calculator does not control third-party processing.</p><h2>Changes</h2><p>This policy may be updated when the app, SDKs, advertising configuration or legal requirements change.</p></main></body></html>'''
+          Path('docs/privacy-policy.html').write_text(policy)
+          Path('PRIVACY_POLICY.md').write_text(policy)
+          PY
+      - name: Production-safe AdMob IDs
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java')
+          s=p.read_text()
+          old='private static final String B="ca-app-pub-3940256099942544/9214589741",I="ca-app-pub-3940256099942544/1033173712",R="ca-app-pub-3940256099942544/5224354917";'
+          new='private static final String B=BuildConfig.DEBUG?"ca-app-pub-3940256099942544/9214589741":"ca-app-pub-9940728659432865/2663696435",I=BuildConfig.DEBUG?"ca-app-pub-3940256099942544/1033173712":"ca-app-pub-9940728659432865/4188531092",R=BuildConfig.DEBUG?"ca-app-pub-3940256099942544/5224354917":"ca-app-pub-9940728659432865/2875449427";'
+          if old not in s: raise SystemExit('AdMob constants not found')
+          p.write_text(s.replace(old,new))
+          PY
+      - name: Harden local data backup
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/AndroidManifest.xml')
+          s=p.read_text().replace('android:allowBackup="true"','android:allowBackup="false"')
+          p.write_text(s)
+          PY
+      - name: Commit final compliance changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/index.html app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java app/src/main/AndroidManifest.xml docs/privacy-policy.html PRIVACY_POLICY.md
+          git commit -m "Finalize Easy Calculator compliance" || exit 0
+          git push
