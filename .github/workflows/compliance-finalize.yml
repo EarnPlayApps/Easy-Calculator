@@ -1,5 +1,4 @@
 name: Easy Calculator Compliance Finalizer
-# Compliance pass trigger
 on:
   push:
     branches: [main]
@@ -7,7 +6,7 @@ permissions:
   contents: write
 jobs:
   finalize:
-    if: !contains(github.event.head_commit.message, 'Finalize Easy Calculator compliance')
+    if: ${{ !contains(github.event.head_commit.message, 'Finalize Easy Calculator compliance') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
