@@ -51,8 +51,13 @@ public class MainActivity extends Activity {
     @Override protected void onCreate(Bundle b){super.onCreate(b); buildUi(); setupConsentAndAds();}
 
     private void buildUi(){
-        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.rgb(245,247,251));
-        webView=new WebView(this); WebSettings s=webView.getSettings(); s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setAllowFileAccess(true); s.setAllowContentAccess(false); s.setBuiltInZoomControls(false); s.setDisplayZoomControls(false);
+        LinearLayout root=new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(Color.rgb(245,247,251));
+        webView=new WebView(this);
+        WebSettings s=webView.getSettings();
+        s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setAllowFileAccess(true); s.setAllowContentAccess(false);
+        s.setBuiltInZoomControls(false); s.setDisplayZoomControls(false);
         webView.setBackgroundColor(Color.rgb(245,247,251));
         webView.setWebViewClient(new WebViewClient(){
             @Override public void onPageFinished(WebView view,String url){
@@ -63,14 +68,42 @@ public class MainActivity extends Activity {
                 view.postDelayed(()->hardenCalculatorLayout(),1500);
             }
         });
-        webView.setWebChromeClient(new WebChromeClient()); webView.addJavascriptInterface(new AdBridge(),"Android"); webView.loadUrl("file:///android_asset/index.html");
+        webView.setWebChromeClient(new WebChromeClient());
+        webView.addJavascriptInterface(new AdBridge(),"Android");
+        webView.loadUrl("file:///android_asset/index.html");
         root.addView(webView,new LinearLayout.LayoutParams(-1,0,1f));
-        bannerView=new AdView(this); bannerView.setAdUnitId(bannerId()); bannerView.setAdSize(AdSize.BANNER); bannerView.setBackgroundColor(Color.WHITE); root.addView(bannerView,new LinearLayout.LayoutParams(-1,-2)); setContentView(root);
+        bannerView=new AdView(this); bannerView.setAdUnitId(bannerId()); bannerView.setAdSize(AdSize.BANNER); bannerView.setBackgroundColor(Color.WHITE);
+        root.addView(bannerView,new LinearLayout.LayoutParams(-1,-2));
+        setContentView(root);
     }
 
     private void hardenCalculatorLayout(){
         if(webView==null)return;
-        String js="javascript:(function(){try{var a=document.getElementById('app');if(a)a.classList.add('basicMode');var s=document.getElementById('__ec_layout_fix');if(!s){s=document.createElement('style');s.id='__ec_layout_fix';s.textContent='#app .merdeka{display:none!important}#app .keys{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:repeat(5,minmax(56px,1fr))!important;gap:9px!important;width:100%!important;height:auto!important;flex:none!important;align-content:stretch!important}#app .key{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;min-width:0!important;min-height:56px!important;height:clamp(56px,9vh,76px)!important;box-sizing:border-box!important}#app .quick{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important}';document.head.appendChild(s);}else{a&&a.classList.add('basicMode');}}catch(e){}})();";
+        String js="javascript:(function(){try{"+
+            "var a=document.getElementById('app');"+
+            "if(a)a.classList.add('basicMode');"+
+            "var s=document.getElementById('__ec_layout_fix');"+
+            "if(!s){s=document.createElement('style');s.id='__ec_layout_fix';s.textContent="+
+            "'html,body{height:100%!important;margin:0!important;overflow:hidden!important}'+"+
+            "'#app{height:100%!important;min-height:100%!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}'+"+
+            "'#app .merdeka{display:none!important}'+"+
+            "'#app .keys{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:repeat(5,minmax(0,1fr))!important;gap:9px!important;width:100%!important;flex:1!important;min-height:0!important;align-content:stretch!important}'+"+
+            "'#app .key{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;min-width:0!important;height:auto!important;min-height:0!important;box-sizing:border-box!important}'+"+
+            "'#app .quick{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important}'+"+
+            "'.historyActions{display:flex;justify-content:flex-end;gap:6px;margin:-4px 0 10px}'+"+
+            "'.clearHistory{border:1px solid #f0d7bb;background:#fff8f0;color:#b96500;border-radius:10px;padding:7px 10px;font-size:10px;font-weight:800}'+"+
+            "'.historyItemActions{display:flex;justify-content:flex-end;gap:6px;margin-top:8px}'+"+
+            "'.historyItem button{margin-top:0!important;padding:7px 9px!important}'+"+
+            "'.historyItem button.delete{color:#c84b4b;border-color:#f0dada;background:#fffafa}';"+
+            "document.head.appendChild(s);}"+
+            "var list=document.getElementById('historyList');"+
+            "window.__ecEscape=function(v){return String(v).replace(/[&<>\\\"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','\\\"':'&quot;',\"'\":'&#39;'}[m]})};"+
+            "window.__ecRenderHistory=function(){var el=document.getElementById('historyList');if(!el)return;var d=window.historyData||[];if(!d.length){el.innerHTML='<div class=\"historyEmpty\">Belum ada pengiraan.</div>';return;}el.innerHTML='<div class=\"historyActions\"><button class=\"clearHistory\" onclick=\"window.__ecClearHistory()\">Padam semua</button></div><div class=\"historyList\">'+d.map(function(h,i){return '<div class=\"historyItem\"><b>'+window.__ecEscape(h.expression)+' = '+window.__ecEscape(h.result)+'</b><span>'+window.__ecEscape(h.time||'')+'</span><div class=\"historyItemActions\"><button onclick=\"window.__ecUseHistory('+i+')\">Guna semula</button><button class=\"delete\" onclick=\"window.__ecDeleteHistory('+i+')\">Padam</button></div></div>'}).join('')+'</div>';};"+
+            "window.__ecDeleteHistory=function(i){var d=window.historyData||[];if(i<0||i>=d.length)return;if(!window.confirm('Padam rekod ini?'))return;d.splice(i,1);window.historyData=d;try{localStorage.setItem('easyCalculatorHistory',JSON.stringify(d))}catch(e){}window.__ecRenderHistory()};"+
+            "window.__ecClearHistory=function(){var d=window.historyData||[];if(!d.length)return;if(!window.confirm('Padam semua history pengiraan?'))return;window.historyData=[];try{localStorage.removeItem('easyCalculatorHistory')}catch(e){}window.__ecRenderHistory()};"+
+            "window.__ecUseHistory=function(i){var d=window.historyData||[];if(!d[i])return;window.expr=String(d[i].result);if(window.show)window.show();var o=document.getElementById('historyOverlay');if(o)o.classList.remove('show')};"+
+            "var hb=document.getElementById('historyBtn');if(hb){hb.onclick=function(){window.__ecRenderHistory();var o=document.getElementById('historyOverlay');if(o)o.classList.add('show')}}"+
+            "}catch(e){}})();";
         webView.evaluateJavascript(js,null);
     }
 
@@ -78,17 +111,17 @@ public class MainActivity extends Activity {
         consentInformation=UserMessagingPlatform.getConsentInformation(this);
         ConsentRequestParameters params=new ConsentRequestParameters.Builder().build();
         consentInformation.requestConsentInfoUpdate(this,params,()->{
-            UserMessagingPlatform.loadAndShowConsentFormIfRequired(this,error->{ updatePrivacyButton(); startAdsIfAllowed(); });
+            UserMessagingPlatform.loadAndShowConsentFormIfRequired(this,error->{updatePrivacyButton();startAdsIfAllowed();});
             updatePrivacyButton(); startAdsIfAllowed();
-        },error->{updatePrivacyButton(); startAdsIfAllowed();});
+        },error->{updatePrivacyButton();startAdsIfAllowed();});
     }
 
     private void updatePrivacyButton(){if(webView==null||consentInformation==null)return; boolean req=consentInformation.getPrivacyOptionsRequirementStatus()==ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED; webView.post(()->webView.evaluateJavascript("(function(){var b=document.getElementById('privacyBtn');if(b)b.style.display="+(req?"'inline-block'":"'none'")+";})();",null));}
-    private void startAdsIfAllowed(){if(adsStarted||consentInformation==null||!consentInformation.canRequestAds())return; adsStarted=true; MobileAds.initialize(this,status->{loadBanner();loadInterstitial();loadRewarded();});}
+    private void startAdsIfAllowed(){if(adsStarted||consentInformation==null||!consentInformation.canRequestAds())return;adsStarted=true;MobileAds.initialize(this,status->{loadBanner();loadInterstitial();loadRewarded();});}
     private void loadBanner(){if(bannerView!=null)bannerView.loadAd(new AdRequest.Builder().build());}
-    private void loadInterstitial(){InterstitialAd.load(this,interstitialId(),new AdRequest.Builder().build(),new InterstitialAdLoadCallback(){@Override public void onAdLoaded(InterstitialAd ad){interstitialAd=ad; ad.setFullScreenContentCallback(new FullScreenContentCallback(){@Override public void onAdDismissedFullScreenContent(){interstitialAd=null;loadInterstitial();}@Override public void onAdFailedToShowFullScreenContent(AdError e){interstitialAd=null;loadInterstitial();}});}@Override public void onAdFailedToLoad(LoadAdError e){interstitialAd=null;}});}
+    private void loadInterstitial(){InterstitialAd.load(this,interstitialId(),new AdRequest.Builder().build(),new InterstitialAdLoadCallback(){@Override public void onAdLoaded(InterstitialAd ad){interstitialAd=ad;ad.setFullScreenContentCallback(new FullScreenContentCallback(){@Override public void onAdDismissedFullScreenContent(){interstitialAd=null;loadInterstitial();}@Override public void onAdFailedToShowFullScreenContent(AdError e){interstitialAd=null;loadInterstitial();}});}@Override public void onAdFailedToLoad(LoadAdError e){interstitialAd=null;}});}
     private void loadRewarded(){RewardedAd.load(this,rewardedId(),new AdRequest.Builder().build(),new RewardedAdLoadCallback(){@Override public void onAdLoaded(RewardedAd ad){rewardedAd=ad;ad.setFullScreenContentCallback(new FullScreenContentCallback(){@Override public void onAdDismissedFullScreenContent(){rewardedAd=null;loadRewarded();}@Override public void onAdFailedToShowFullScreenContent(AdError e){rewardedAd=null;loadRewarded();}});}@Override public void onAdFailedToLoad(LoadAdError e){rewardedAd=null;}});}
-    private void showRewarded(){if(rewardedAd==null){Toast.makeText(this,"Rewarded sedang disediakan. Cuba lagi sebentar.",Toast.LENGTH_SHORT).show();loadRewarded();return;} RewardedAd ad=rewardedAd;rewardedAd=null;ad.show(this,item->Toast.makeText(this,"Reward diterima: 1",Toast.LENGTH_SHORT).show());}
+    private void showRewarded(){if(rewardedAd==null){Toast.makeText(this,"Rewarded sedang disediakan. Cuba lagi sebentar.",Toast.LENGTH_SHORT).show();loadRewarded();return;}RewardedAd ad=rewardedAd;rewardedAd=null;ad.show(this,item->Toast.makeText(this,"Reward diterima: 1",Toast.LENGTH_SHORT).show());}
     private void showInterstitial(){long now=SystemClock.elapsedRealtime();if(now-lastInterstitialShown<300000L||interstitialAd==null)return;lastInterstitialShown=now;InterstitialAd ad=interstitialAd;interstitialAd=null;ad.show(this);}
     private void showPrivacyOptions(){UserMessagingPlatform.showPrivacyOptionsForm(this,error->updatePrivacyButton());}
     public class AdBridge{@JavascriptInterface public void showRewardedAd(){runOnUiThread(()->showRewarded());}@JavascriptInterface public void onNaturalTransition(){runOnUiThread(()->showInterstitial());}@JavascriptInterface public boolean isPrivacyOptionsRequired(){return consentInformation!=null&&consentInformation.getPrivacyOptionsRequirementStatus()==ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED;}@JavascriptInterface public void showPrivacyOptions(){runOnUiThread(()->showPrivacyOptions());}}
