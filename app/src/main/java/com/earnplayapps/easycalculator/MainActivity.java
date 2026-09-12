@@ -63,10 +63,7 @@ public class MainActivity extends Activity {
         webView.setWebViewClient(new WebViewClient(){
             @Override public void onPageFinished(WebView view,String url){
                 super.onPageFinished(view,url);
-                hardenCalculatorLayout();
-                view.postDelayed(()->hardenCalculatorLayout(),120);
-                view.postDelayed(()->hardenCalculatorLayout(),600);
-                view.postDelayed(()->hardenCalculatorLayout(),1500);
+                patchCalculatorUi();
             }
         });
         webView.setWebChromeClient(new WebChromeClient());
@@ -78,19 +75,17 @@ public class MainActivity extends Activity {
         setContentView(root);
     }
 
-    private void hardenCalculatorLayout(){
+    private void patchCalculatorUi(){
         if(webView==null)return;
         String js="javascript:(function(){try{"+
-            "var a=document.getElementById('app');if(a)a.classList.add('basicMode');"+
-            "var s=document.getElementById('__ec_layout_fix');"+
-            "if(!s){s=document.createElement('style');s.id='__ec_layout_fix';s.textContent="+
-            "'html,body{height:100%!important;margin:0!important;overflow:hidden!important}'+"+
-            "'#app{height:100%!important;min-height:100%!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}'+"+
-            "'#app .merdeka{display:none!important}'+"+
-            "'#app .keys{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:repeat(5,minmax(0,1fr))!important;gap:9px!important;width:100%!important;flex:1 1 auto!important;min-height:0!important;align-content:stretch!important}'+"+
-            "'#app .key{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;min-width:0!important;height:auto!important;min-height:0!important;box-sizing:border-box!important}'+"+
-            "'#app .quick{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important}';"+
-            "document.head.appendChild(s);}"+
+            "var s=document.getElementById('__ec_targeted_fix');"+
+            "if(!s){s=document.createElement('style');s.id='__ec_targeted_fix';s.textContent="+
+            "'#app .merdeka{display:none!important}';document.head.appendChild(s);}"+
+            "var hb=document.getElementById('historyBtn');"+
+            "if(hb){hb.onclick=function(){window.__ecRenderHistory();var o=document.getElementById('historyOverlay');if(o)o.classList.add('show')}}"+
+            "window.__ecRenderHistory=function(){var el=document.getElementById('historyList');if(!el)return;var d=Array.isArray(historyItems)?historyItems:[];if(!d.length){el.innerHTML='<div class=\\\"historyEmpty\\\">Belum ada pengiraan.</div>';return;}el.innerHTML='<div style=\\\"display:flex;justify-content:flex-end;margin-bottom:8px\\\"><button onclick=\\\"window.__ecClearHistory()\\\" style=\\\"border:1px solid #f0d7bb;background:#fff8f0;color:#b96500;border-radius:9px;padding:7px 10px;font-size:10px;font-weight:800\\\">Padam semua</button></div>'+d.map(function(h,i){return '<div class=\\\"historyItem\\\"><b>'+String(h.result||'').replace(/[&<>]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m]})+'</b><span>'+String(h.title||'Basic')+'</span><div style=\\\"display:flex;justify-content:flex-end;gap:6px;margin-top:8px\\\"><button onclick=\\\"useHistory('+i+')\\\" style=\\\"margin:0\\\">Guna semula</button><button onclick=\\\"window.__ecDeleteHistory('+i+')\\\" style=\\\"margin:0;color:#c84b4b\\\">Padam</button></div></div>'}).join('')};"+
+            "window.__ecDeleteHistory=function(i){var d=Array.isArray(historyItems)?historyItems:[];if(i<0||i>=d.length)return;if(!confirm('Padam rekod ini?'))return;d.splice(i,1);window.__ecRenderHistory()};"+
+            "window.__ecClearHistory=function(){if(!Array.isArray(historyItems)||!historyItems.length)return;if(!confirm('Padam semua history pengiraan?'))return;historyItems.length=0;window.__ecRenderHistory()};"+
             "}catch(e){}})();";
         webView.evaluateJavascript(js,null);
     }
