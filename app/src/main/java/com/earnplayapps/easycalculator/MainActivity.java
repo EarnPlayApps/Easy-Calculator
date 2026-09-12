@@ -54,9 +54,23 @@ public class MainActivity extends Activity {
     private void buildUi(){
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.rgb(245,247,251));
         webView=new WebView(this); WebSettings s=webView.getSettings(); s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setAllowFileAccess(true); s.setAllowContentAccess(false); s.setBuiltInZoomControls(false); s.setDisplayZoomControls(false);
-        webView.setBackgroundColor(Color.rgb(245,247,251)); webView.setWebViewClient(new WebViewClient()); webView.setWebChromeClient(new WebChromeClient()); webView.addJavascriptInterface(new AdBridge(),"Android"); webView.loadUrl("file:///android_asset/index.html");
+        webView.setBackgroundColor(Color.rgb(245,247,251));
+        webView.setWebViewClient(new WebViewClient(){
+            @Override public void onPageFinished(WebView view,String url){
+                super.onPageFinished(view,url);
+                hardenCalculatorLayout();
+                view.postDelayed(()->hardenCalculatorLayout(),120);
+            }
+        });
+        webView.setWebChromeClient(new WebChromeClient()); webView.addJavascriptInterface(new AdBridge(),"Android"); webView.loadUrl("file:///android_asset/index.html");
         root.addView(webView,new LinearLayout.LayoutParams(-1,0,1f));
         bannerView=new AdView(this); bannerView.setAdUnitId(bannerId()); bannerView.setAdSize(AdSize.BANNER); bannerView.setBackgroundColor(Color.WHITE); root.addView(bannerView,new LinearLayout.LayoutParams(-1,-2)); setContentView(root);
+    }
+
+    private void hardenCalculatorLayout(){
+        if(webView==null)return;
+        String js="javascript:(function(){try{var a=document.getElementById('app');if(a)a.classList.add('basicMode');var s=document.getElementById('__ec_layout_fix');if(!s){s=document.createElement('style');s.id='__ec_layout_fix';s.textContent='#app .keys{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:9px!important;width:100%!important;align-items:stretch!important;align-content:stretch!important}#app .key{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;min-width:0!important;box-sizing:border-box!important}#app .quick{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important}';document.head.appendChild(s);}}catch(e){}})();";
+        webView.evaluateJavascript(js,null);
     }
 
     private void setupConsentAndAds(){
