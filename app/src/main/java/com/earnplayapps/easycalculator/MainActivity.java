@@ -2,11 +2,14 @@ package com.earnplayapps.easycalculator;
 
 import android.app.Activity;
 import android.graphics.Color;
+import android.graphics.Insets;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.view.View;
+import android.view.WindowInsets;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -28,14 +31,37 @@ public class MainActivity extends Activity {
  @Override protected void onCreate(Bundle b){super.onCreate(b);ui();consent();}
  private void ui(){
   LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(Color.rgb(245,247,251));
+  root.setOnApplyWindowInsetsListener((v,insets)->{
+   int top,bottom;
+   if(Build.VERSION.SDK_INT>=30){Insets bars=insets.getInsets(WindowInsets.Type.systemBars());top=bars.top;bottom=bars.bottom;}
+   else{top=insets.getSystemWindowInsetTop();bottom=insets.getSystemWindowInsetBottom();}
+   v.setPadding(0,top,0,bottom);return insets;
+  });
   w=new WebView(this);WebSettings s=w.getSettings();s.setJavaScriptEnabled(true);s.setDomStorageEnabled(true);s.setAllowFileAccess(true);s.setAllowContentAccess(false);s.setLoadWithOverviewMode(false);s.setUseWideViewPort(false);
   w.setWebViewClient(new WebViewClient(){@Override public void onPageFinished(WebView v,String u){fixMobileCss();w.setVisibility(View.VISIBLE);}});w.setWebChromeClient(new WebChromeClient());w.addJavascriptInterface(new Bridge(),"Android");
   root.addView(w,new LinearLayout.LayoutParams(-1,0,1));
   banner=new AdView(this);banner.setAdUnitId(B);banner.setAdListener(new AdListener(){@Override public void onAdLoaded(){banner.setVisibility(View.VISIBLE);}@Override public void onAdFailedToLoad(LoadAdError e){handler.postDelayed(()->loadBanner(),30000);}});banner.setAdSize(getAdaptiveBannerSize());banner.setVisibility(View.GONE);root.addView(banner,new LinearLayout.LayoutParams(-1,-2));
-  setContentView(root);w.loadUrl("file:///android_asset/index.html");
+  setContentView(root);root.requestApplyInsets();w.loadUrl("file:///android_asset/index.html");
  }
  private AdSize getAdaptiveBannerSize(){int widthPx=getResources().getDisplayMetrics().widthPixels;float density=getResources().getDisplayMetrics().density;int widthDp=Math.max(320,Math.round(widthPx/density));return AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this,widthDp);}
- private void fixMobileCss(){String js="javascript:(function(){try{if(document.getElementById('__ec_mobile'))return;var s=document.createElement('style');s.id='__ec_mobile';s.textContent='html,body{width:100%!important;max-width:100%!important;overflow-x:hidden!important}body{margin:0!important}.app{width:100%!important;max-width:460px!important;margin:0 auto!important;padding:14px 12px 10px!important}.top{grid-template-columns:36px minmax(0,1fr) auto!important;gap:7px!important}.brand{min-width:0!important}.brand h1{font-size:18px!important;white-space:nowrap!important}.brand small{font-size:10px!important;white-space:nowrap!important}.headActions{min-width:0!important}.historyBtn{width:34px!important;flex:none!important}.other{padding:7px 9px!important;font-size:10px!important}.display{width:100%!important}.quick{width:100%!important;gap:5px!important}.quick button{min-width:0!important;font-size:10px!important;padding:8px 2px!important}.basicMode .keys{width:100%!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:7px!important}.basicMode .key{width:100%!important;height:clamp(48px,9.5vh,70px)!important;min-width:0!important}.basicMode .result{font-size:clamp(34px,9vw,52px)!important}.catgrid{grid-template-columns:1fr 1fr!important}.modal{width:min(100%,430px)!important;max-height:88vh!important}.two{grid-template-columns:1fr 1fr!important}@media(max-width:360px){.top{grid-template-columns:34px minmax(0,1fr) auto!important}.other{font-size:9px!important;padding:6px 7px!important}.brand h1{font-size:16px!important}.historyBtn{width:31px!important}.basicMode .key{height:46px!important}.basicMode .result{font-size:32px!important}}';document.head.appendChild(s);}catch(e){console.log('Easy Calculator mobile CSS',e)}})();";w.evaluateJavascript(js,null);}
+ private void fixMobileCss(){String js="javascript:(function(){try{"+
+  "if(document.getElementById('__ec_mobile'))return;"+
+  "var s=document.createElement('style');s.id='__ec_mobile';s.textContent="+
+  "'html,body{width:100%!important;max-width:100%!important;overflow-x:hidden!important}'+"+
+  "'.app{width:100%!important;max-width:460px!important;margin:0 auto!important}'+"+
+  "'.top{grid-template-columns:36px minmax(0,1fr) auto!important;gap:6px!important}'+"+
+  "'.brand{min-width:0!important;overflow:hidden!important}'+"+
+  "'.brand h1{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}'+"+
+  "'.brand small{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}'+"+
+  "'.headActions{min-width:0!important;gap:4px!important;flex-shrink:0!important}'+"+
+  "'.historyBtn{flex:none!important}'+"+
+  "'.other{flex:none!important;max-width:110px!important;overflow:hidden!important;text-overflow:ellipsis!important}'+"+
+  "'.display,.quick,.keys{max-width:100%!important}'+"+
+  "'@media(max-width:360px){.top{grid-template-columns:32px minmax(0,1fr) auto!important;gap:4px!important}.brand h1{font-size:16px!important}.brand small{font-size:9px!important}.historyBtn{width:30px!important}.other{max-width:86px!important;font-size:9px!important;padding:6px 7px!important}}';"+
+  "document.head.appendChild(s);"+
+  "if(!document.getElementById('catSearch')){var i=document.createElement('input');i.id='catSearch';i.type='hidden';i.value='';document.body.appendChild(i);}"+
+  "}catch(e){console.log('Easy Calculator mobile safety',e)}})();";
+  w.evaluateJavascript(js,null);}
  private void consent(){consent=UserMessagingPlatform.getConsentInformation(this);consent.requestConsentInfoUpdate(this,new ConsentRequestParameters.Builder().build(),()->UserMessagingPlatform.loadAndShowConsentFormIfRequired(this,e->{privacy();ads();}),e->{privacy();ads();});}
  private void privacy(){if(w==null||consent==null)return;boolean r=consent.getPrivacyOptionsRequirementStatus()==ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED;w.evaluateJavascript("(function(){var b=document.getElementById('privacyBtn');if(b)b.style.display="+(r?"'inline-block'":"'none")+"})()",null);}
  private void ads(){if(ads||consent==null||!consent.canRequestAds())return;ads=true;MobileAds.initialize(this,s->{loadBanner();loadInter();loadReward();});}
