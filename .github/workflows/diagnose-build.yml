@@ -35,20 +35,39 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      - name: Gradle environment
+      - name: Capture exact build failure
+        shell: bash
         run: |
-          java -version
-          gradle --version
-          gradle projects --stacktrace
+          set +e
+          mkdir -p diagnosis
+          echo '=== JAVA ===' | tee diagnosis/java-version.txt
+          java -version 2>&1 | tee -a diagnosis/java-version.txt
+          echo '=== GRADLE ===' | tee diagnosis/gradle-version.txt
+          gradle --version 2>&1 | tee -a diagnosis/gradle-version.txt
+          echo '=== AAR METADATA ===' | tee diagnosis/aar.log
+          gradle :app:checkDebugAarMetadata --stacktrace --console=plain 2>&1 | tee -a diagnosis/aar.log
+          AAR=${PIPESTATUS[0]}
+          echo "AAR_EXIT=$AAR" | tee -a diagnosis/aar.log
+          echo '=== RESOURCES ===' | tee diagnosis/resources.log
+          gradle :app:processDebugResources --stacktrace --console=plain 2>&1 | tee -a diagnosis/resources.log
+          RES=${PIPESTATUS[0]}
+          echo "RES_EXIT=$RES" | tee -a diagnosis/resources.log
+          echo '=== JAVAC ===' | tee diagnosis/javac.log
+          gradle :app:compileDebugJavaWithJavac --stacktrace --console=plain 2>&1 | tee -a diagnosis/javac.log
+          JAVAC=${PIPESTATUS[0]}
+          echo "JAVAC_EXIT=$JAVAC" | tee -a diagnosis/javac.log
+          echo '=== FULL BUILD ===' | tee diagnosis/build.log
+          gradle :app:assembleDebug --stacktrace --console=plain 2>&1 | tee -a diagnosis/build.log
+          BUILD=${PIPESTATUS[0]}
+          echo "BUILD_EXIT=$BUILD" | tee -a diagnosis/build.log
+          echo "AAR=$AAR RES=$RES JAVAC=$JAVAC BUILD=$BUILD" | tee diagnosis/result.txt
+          if [ "$JAVAC" -ne 0 ]; then exit "$JAVAC"; fi
+          if [ "$BUILD" -ne 0 ]; then exit "$BUILD"; fi
 
-      - name: Diagnose dependency metadata
-        run: gradle :app:checkDebugAarMetadata --stacktrace --info
-
-      - name: Diagnose resources
-        run: gradle :app:processDebugResources --stacktrace --info
-
-      - name: Diagnose Java compilation
-        run: gradle :app:compileDebugJavaWithJavac --stacktrace --info
-
-      - name: Diagnose full debug build
-        run: gradle :app:assembleDebug --stacktrace --info
+      - name: Upload diagnosis logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Easy-Calculator-build-diagnosis
+          path: diagnosis/
+          if-no-files-found: error
