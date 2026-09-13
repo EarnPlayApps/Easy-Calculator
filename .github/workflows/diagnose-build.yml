@@ -1,0 +1,54 @@
+name: Easy Calculator Build Diagnosis
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Accept SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.13'
+
+      - name: Gradle environment
+        run: |
+          java -version
+          gradle --version
+          gradle projects --stacktrace
+
+      - name: Diagnose dependency metadata
+        run: gradle :app:checkDebugAarMetadata --stacktrace --info
+
+      - name: Diagnose resources
+        run: gradle :app:processDebugResources --stacktrace --info
+
+      - name: Diagnose Java compilation
+        run: gradle :app:compileDebugJavaWithJavac --stacktrace --info
+
+      - name: Diagnose full debug build
+        run: gradle :app:assembleDebug --stacktrace --info
