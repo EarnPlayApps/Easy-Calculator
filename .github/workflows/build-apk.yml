@@ -35,8 +35,40 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      - name: Build debug APK
-        run: gradle assembleDebug --stacktrace
+      - name: Diagnose and build debug APK
+        id: debug_build
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          {
+            echo '=== JAVA ==='
+            java -version
+            echo '=== GRADLE ==='
+            gradle --version
+            echo '=== PROJECTS ==='
+            gradle projects --stacktrace
+            echo '=== AAR METADATA ==='
+            gradle :app:checkDebugAarMetadata --stacktrace --info
+            echo '=== RESOURCES ==='
+            gradle :app:processDebugResources --stacktrace --info
+            echo '=== JAVA COMPILE ==='
+            gradle :app:compileDebugJavaWithJavac --stacktrace --info
+            echo '=== FULL DEBUG BUILD ==='
+            gradle :app:assembleDebug --stacktrace --info
+          } 2>&1 | tee build-debug.log
+
+      - name: Upload exact build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: easy-calculator-build-diagnostic-log
+          path: build-debug.log
+          if-no-files-found: error
+
+      - name: Stop if debug build failed
+        if: steps.debug_build.outcome == 'failure'
+        run: exit 1
 
       - name: Build release APK (real AdMob)
         run: gradle assembleRelease --stacktrace
