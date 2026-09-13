@@ -73,4 +73,4 @@ jobs:
             app/build.gradle
             app/src/main/AndroidManifest.xml
 
-# User Production build flow checkpoint
+# User Production build checkpoint: PR trigger
