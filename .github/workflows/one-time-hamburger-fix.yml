@@ -1,0 +1,32 @@
+name: Easy Calculator one-time hamburger fix
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  fix:
+    if: ${{ !contains(github.event.head_commit.message, 'Restore Easy Calculator hamburger') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore exact three-line hamburger
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/assets/index.html')
+          s=p.read_text(encoding='utf-8')
+          old='.hamb{width:38px;height:38px;border:1px solid var(--line);background:#fff;border-radius:12px;display:grid;place-content:center;gap:4px;box-shadow:0 5px 16px #1720330a}.hamb i{display:block;width:18px;height:2px;background:#263044;border-radius:4px}'
+          new='.hamb{width:38px;height:38px;border:1px solid var(--line);background:#fff;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:0 5px 16px #1720330a;padding:0}.hamb i{display:block;width:18px;height:2px;min-height:2px;background:#263044;border-radius:4px;flex:none}'
+          if old not in s: raise SystemExit('hamburger CSS pattern not found')
+          s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit and remove one-time workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/assets/index.html
+          git rm .github/workflows/one-time-hamburger-fix.yml
+          git commit -m 'Restore Easy Calculator hamburger'
+          git push
