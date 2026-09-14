@@ -35,3 +35,4 @@ jobs:
           git add app/src/main/assets/index.html
           git commit -m 'Easy Calculator: restore source and apply usability fixes' || exit 0
           git push
+          # repair workflow v2
