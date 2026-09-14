@@ -1,0 +1,134 @@
+name: Easy Calculator Final Release
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Permanently lock Easy Calculator requested behavior
+        shell: bash
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('app/src/main/assets/index.html')
+          s=p.read_text()
+
+          # AC is always visibly red; do not change the rest of the calculator UI.
+          if '.key.acKey{' not in s:
+              s=s.replace('</style>', '.key.acKey{color:#d94b45!important;background:#fff7f6!important;border-color:#ead6d3!important}.key.acKey:active{background:#d94b45!important;color:#fff!important}</style>', 1)
+          s=s.replace('<button class="key soft" onclick="clearAll()" aria-label="Padam semua">AC</button>', '<button class="key soft acKey" onclick="clearAll()" aria-label="Padam semua">AC</button>')
+
+          # Final runtime overrides: top resize minimizes Android; top calculator returns to Basic.
+          marker='// EASY_CALCULATOR_FINAL_BEHAVIOR_LOCK'
+          if marker not in s:
+              lock="""<script>
+          // EASY_CALCULATOR_FINAL_BEHAVIOR_LOCK
+          (function(){
+            var r=document.getElementById('resizeBtn');
+            if(r) r.onclick=function(){
+              if(window.Android && typeof Android.minimizeApp==='function') Android.minimizeApp();
+              else document.documentElement.classList.toggle('wideView');
+            };
+            var g=document.getElementById('gridBtn');
+            if(g) g.onclick=function(){
+              if(typeof openCalculator==='function') openCalculator();
+            };
+            var c=document.querySelector('.calcOtherKey');
+            if(c) c.onclick=function(){
+              if(typeof openCats==='function') openCats();
+            };
+          })();
+          </script>"""
+              s=s.replace('</body>', lock+'\n</body>', 1)
+          p.write_text(s)
+
+          # Keep the native minimize bridge authoritative.
+          q=Path('app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java')
+          j=q.read_text()
+          if 'moveTaskToBack(true)' not in j:
+              raise SystemExit('Native minimize bridge missing')
+          q.write_text(j)
+          PY
+
+          grep -q 'class="key soft acKey"' app/src/main/assets/index.html
+          grep -q 'EASY_CALCULATOR_FINAL_BEHAVIOR_LOCK' app/src/main/assets/index.html
+          grep -q 'Android.minimizeApp' app/src/main/assets/index.html
+          grep -q 'moveTaskToBack(true)' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+
+      - name: Verify production AdMob configuration
+        run: |
+          set -e
+          grep -q 'ca-app-pub-9940728659432865~9855790743' app/src/main/AndroidManifest.xml
+          grep -q 'ca-app-pub-9940728659432865/2663696435' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          grep -q 'ca-app-pub-9940728659432865/4188531092' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          grep -q 'ca-app-pub-9940728659432865/2875449427' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          grep -q 'consent.canRequestAds()' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          grep -q 'loadBanner()' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+
+      - name: Build Easy Calculator release APK
+        run: gradle assembleRelease --stacktrace
+
+      - name: Verify final APK
+        shell: bash
+        run: |
+          set -e
+          apk=$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)
+          test -n "$apk"
+          unzip -t "$apk" >/dev/null
+          unzip -p "$apk" assets/index.html | grep -q 'class="key soft acKey"'
+          unzip -p "$apk" assets/index.html | grep -q 'EASY_CALCULATOR_FINAL_BEHAVIOR_LOCK'
+          unzip -p "$apk" assets/index.html | grep -q 'Android.minimizeApp'
+          unzip -p "$apk" assets/index.html | grep -q 'openCalculator'
+          unzip -p "$apk" classes.dex | strings | grep -q 'moveTaskToBack'
+          sha256sum "$apk"
+          ls -lh "$apk"
+
+      - name: Upload final APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Easy-Calculator-Final-Release
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      - name: Commit permanent source lock
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/assets/index.html app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          if git diff --cached --quiet; then echo 'Source already locked'; exit 0; fi
+          git commit -m 'Easy Calculator: permanently lock requested final behavior'
+          git push
