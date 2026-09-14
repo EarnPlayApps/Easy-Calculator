@@ -48,12 +48,16 @@ jobs:
           h=h.replace("function openCats(){closeAllOverlays();", "function openCats(){")
           h=h.replace("function openHistory(from='home'){historyReturn=from;closeAllOverlays();", "function openHistory(from='home'){historyReturn=from;")
           h=h.replace("function openSettings(){closeAllOverlays();", "function openSettings(){")
+          h=h.replace('<button class="key soft" onclick="clearAll()" aria-label="Padam semua">AC</button>','<button class="key soft acKey" onclick="clearAll()" aria-label="Padam semua">AC</button>')
           for x in [
             "document.getElementById('catOverlay').addEventListener('click',e=>{if(e.target.id==='catOverlay')closeCats()});",
             "document.getElementById('toolOverlay').addEventListener('click',e=>{if(e.target.id==='toolOverlay')closeTool()});",
             "document.getElementById('historyOverlay').addEventListener('click',e=>{if(e.target.id==='historyOverlay')closeHistory()});",
             "document.getElementById('settingsOverlay').addEventListener('click',e=>{if(e.target.id==='settingsOverlay')closeSettings()});"]:
             h=h.replace(x,'')
+          marker='.acKey{'
+          if marker not in h:
+            h=h.replace('</style></head>',' .acKey{color:#d94b45!important} </style></head>')
           q.write_text(h)
           PY
       - name: Verify source cleanup
@@ -68,6 +72,11 @@ jobs:
           test "$(grep -o 'function openCats' app/src/main/assets/index.html | wc -l)" -eq 1
           test "$(grep -o 'function openHistory' app/src/main/assets/index.html | wc -l)" -eq 1
           test "$(grep -o 'function openSettings' app/src/main/assets/index.html | wc -l)" -eq 1
+          grep -q 'acKey' app/src/main/assets/index.html
+          ! grep -q 'catOverlay.*addEventListener.*click' app/src/main/assets/index.html
+          ! grep -q 'toolOverlay.*addEventListener.*click' app/src/main/assets/index.html
+          ! grep -q 'historyOverlay.*addEventListener.*click' app/src/main/assets/index.html
+          ! grep -q 'settingsOverlay.*addEventListener.*click' app/src/main/assets/index.html
       - name: Build Easy Calculator release APK
         run: gradle assembleRelease --stacktrace
       - name: Verify final APK
@@ -80,6 +89,7 @@ jobs:
           unzip -p "$apk" assets/index.html | grep -q 'class="key soft acKey"'
           unzip -p "$apk" assets/index.html | grep -q 'Android.minimizeApp'
           unzip -p "$apk" classes.dex | strings | grep -q 'moveTaskToBack'
+          unzip -p "$apk" assets/index.html | grep -q 'ca-app-pub-9940728659432865/2663696435'
           sha256sum "$apk"
           ls -lh "$apk"
       - name: Upload final APK
