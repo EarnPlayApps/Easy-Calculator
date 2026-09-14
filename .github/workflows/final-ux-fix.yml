@@ -1,0 +1,87 @@
+name: Easy Calculator Final UX Fix
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Apply Easy Calculator UX fixes
+        shell: bash
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('app/src/main/assets/index.html')
+          s=p.read_text()
+
+          style='''.backBtn{height:36px;border:1px solid var(--line);background:#f7f8fb;color:#526078;border-radius:11px;padding:0 12px;font-size:12px;font-weight:800;white-space:nowrap}.backBtn:active{transform:translateY(1px);background:#fff4e9;color:var(--orange)}.historyModal .mhead{grid-template-columns:1fr auto auto!important;align-items:center!important}'''
+          if '.backBtn{' not in s:
+              s=s.replace('</style>',style+'</style>',1)
+
+          old='<div class="overlay" id="historyOverlay"><div class="modal historyModal"><div class="mhead"><div><h2>History</h2><p>Pengiraan terakhir anda</p></div><button class="close" onclick="closeHistory()">×</button></div>'
+          new='<div class="overlay" id="historyOverlay"><div class="modal historyModal"><div class="mhead"><div><h2>History</h2><p>Pengiraan terakhir anda</p></div><button class="backBtn" onclick="backFromHistory()" type="button">← Kembali</button><button class="close" onclick="closeHistory()" aria-label="Tutup">×</button></div>'
+          s=s.replace(old,new)
+
+          # Replace the existing history functions with a return-aware version.
+          start=s.find('function openHistory()')
+          end=s.find('function openCalculator()',start)
+          if start>=0 and end>start:
+              block="""let historyReturn='home';
+function closeAllOverlays(){['catOverlay','toolOverlay','historyOverlay','settingsOverlay'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('show')})}
+function openHistory(from='home'){historyReturn=from;closeAllOverlays();document.getElementById('historyList').innerHTML=historyItems.length?historyItems.map((x,i)=>`<div class=\"historyItem\"><div class=\"historyItemMain\"><b>${x.expression?x.expression+' = '+x.result:x.result}</b><span>${x.title}</span></div><button class=\"historyDelete\" type=\"button\" onclick=\"deleteHistoryItem(${i})\" aria-label=\"Padam history\" title=\"Padam\">×</button></div>`).join(''):'<div class=\"historyEmpty\">Belum ada pengiraan.</div>';document.getElementById('historyOverlay').classList.add('show')}
+function closeHistory(){document.getElementById('historyOverlay').classList.remove('show')}
+function backFromHistory(){const r=historyReturn;closeHistory();if(r==='settings')openSettings()}
+function openSettings(){closeAllOverlays();document.getElementById('settingsOverlay').classList.add('show');syncSettings()}
+function closeSettings(){document.getElementById('settingsOverlay').classList.remove('show')}
+function syncSettings(){const w=document.getElementById('wideToggle');if(w)w.textContent=document.documentElement.classList.contains('wideView')?'Aktif':'Mati'}
+function toggleWide(){document.documentElement.classList.toggle('wideView');syncSettings()}
+function clearAllHistory(){historyItems=[];renderDisplayHistory();openHistory('settings')}
+"""
+              s=s[:start]+block+s[end:]
+
+          # Make each top action exclusive so no previous overlay remains underneath.
+          s=s.replace("function openCats(){document.getElementById('catOverlay').classList.add('show');renderCats();if(window.Android&&Android.onNaturalTransition)Android.onNaturalTransition()}","function openCats(){closeAllOverlays();document.getElementById('catOverlay').classList.add('show');renderCats();if(window.Android&&Android.onNaturalTransition)Android.onNaturalTransition()}")
+          s=s.replace("function openTool(id,title,desc){document.getElementById('toolTitle').textContent=title;","function openTool(id,title,desc){closeAllOverlays();document.getElementById('toolTitle').textContent=title;")
+          s=s.replace('onclick="openHistory();closeSettings()">Lihat History','onclick="openHistory(\'settings\')">Lihat History')
+          s=s.replace("document.getElementById('moreBtn').onclick=openHistory;","document.getElementById('moreBtn').onclick=()=>openHistory('home');")
+          s=s.replace("document.getElementById('resizeBtn').onclick=()=>document.documentElement.classList.toggle('wideView');","document.getElementById('resizeBtn').onclick=()=>{if(window.Android&&Android.minimizeApp)Android.minimizeApp();else document.documentElement.classList.toggle('wideView')};")
+          # Dedicated X/back buttons control closing; don't let random backdrop taps silently dismiss the current screen.
+          s=re.sub(r"document\.getElementById\('(catOverlay|toolOverlay|historyOverlay|settingsOverlay)'\)\.addEventListener\('click',e=>\{if\(e\.target\.id=='(?:catOverlay|toolOverlay|historyOverlay|settingsOverlay)'\)\w+\(\)\}\);",'',s)
+          p.write_text(s)
+
+          j=Path('app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java')
+          t=j.read_text()
+          if 'void minimizeApp()' not in t:
+              needle='@JavascriptInterface public void showRewardedAd(){runOnUiThread(()->showReward());}'
+              t=t.replace(needle,needle+'\n  @JavascriptInterface public void minimizeApp(){runOnUiThread(()->{try{moveTaskToBack(true);}catch(Exception ignored){}});}',1)
+          if 'w.evaluateJavascript("document.documentElement.classList.remove(\\\'wideView\\\')",null)' not in t:
+              t=t.replace('@Override protected void onResume(){super.onResume();','@Override protected void onResume(){super.onResume();if(w!=null)w.evaluateJavascript("document.documentElement.classList.remove(\\\'wideView\\\')",null);',1)
+          j.write_text(t)
+          PY
+
+          grep -q 'function backFromHistory' app/src/main/assets/index.html
+          grep -q "openHistory('settings')" app/src/main/assets/index.html
+          grep -q 'Android.minimizeApp' app/src/main/assets/index.html
+          grep -q 'void minimizeApp()' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+
+      - name: Commit fixes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/index.html app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Easy Calculator: improve minimize and overlay navigation"
+          git push origin HEAD:main
