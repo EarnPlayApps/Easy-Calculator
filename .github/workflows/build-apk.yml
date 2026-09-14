@@ -15,6 +15,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Restore Easy Calculator source baseline
+        shell: bash
+        run: |
+          set -e
+          git fetch --no-tags origin e58b461d7a4f80136bde926170444c9d1019f260
+          git checkout e58b461d7a4f80136bde926170444c9d1019f260^ -- app/src/main/assets/index.html
+
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
@@ -44,43 +51,58 @@ jobs:
           import re
           p=Path('app/src/main/assets/index.html')
           s=p.read_text()
-          # Remove legacy/duplicate CSS. One final stylesheet prevents old rules from overriding the UI.
           s=re.sub(r'<style(?:\s[^>]*)?>.*?</style>', '', s, flags=re.S|re.I)
           css='''<style>
           :root{--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#6f7a8e;--line:#e4e9f1;--orange:#f28a16;--danger:#d94b45}
           *{box-sizing:border-box}html,body{margin:0;width:100%;min-height:100%;background:var(--bg);color:var(--text);font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow-x:hidden}button,input,select{font:inherit}button{cursor:pointer}
           .app{width:100%;max-width:680px;min-height:100dvh;margin:auto;padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));display:flex;flex-direction:column}
-          .top{display:grid!important;grid-template-columns:minmax(0,1fr) repeat(5,38px)!important;gap:7px!important;align-items:center!important;width:100%!important;margin:0 0 9px!important;padding:0!important}
-          .appName{font-weight:900;font-size:20px;letter-spacing:-.6px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;padding:5px 0 7px}.appName:after{content:'CALCULATE  •  CONVERT  •  SIMPLIFY';display:block;font-size:7px;letter-spacing:1.1px;color:#8993a6;font-weight:800;margin-top:5px}.easyTitle{background:linear-gradient(135deg,#e87505,#f7a12e);-webkit-background-clip:text;background-clip:text;color:transparent}
-          .topIcon{width:38px!important;height:38px!important;min-width:38px!important;min-height:38px!important;border:1px solid var(--line)!important;background:#fff!important;border-radius:12px!important;display:grid!important;place-items:center!important;color:#526078!important;box-shadow:0 5px 15px #1720330b!important;padding:0!important}.topIcon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.topIcon:active{transform:translateY(1px);background:#fff4e9!important;color:var(--orange)!important}
-          .display{background:#fff;border:1px solid var(--line);border-radius:20px;padding:15px 17px;margin-bottom:8px;min-height:190px;display:flex;flex-direction:column;justify-content:flex-end;box-shadow:0 8px 25px #1720330a;overflow:hidden}.displayHistory{min-height:0;max-height:82px;overflow:hidden;color:var(--muted);font-size:11px;text-align:right}.historyLine{display:flex;justify-content:flex-end;gap:5px}.expr{text-align:right;color:var(--muted);font-size:12px;min-height:18px;overflow:hidden}.result{text-align:right;font-size:clamp(40px,11vw,62px);font-weight:850;line-height:1.1;min-height:60px;overflow:hidden}
-          .quick{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:8px}.quick button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 3px;color:var(--muted);font-size:11px;font-weight:750}.keys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.key{height:clamp(54px,10vh,78px);min-width:0;border:1px solid var(--line);background:#fff;border-radius:13px;font-size:20px;font-weight:800;color:#20283a;box-shadow:0 4px 12px #17203308}.key.op{background:#fff4e9;color:#d8750a;border-color:#f5d5b2}.key.eq{background:linear-gradient(135deg,#f28a16,#ffb347);color:#fff;border:0}.key.soft{background:#f5f7fb;color:#5c687d}.key.ac{background:#fff1f0;color:var(--danger);border-color:#f0c8c5}.key.ac:active{background:var(--danger);color:#fff}
+          .top{display:grid!important;grid-template-columns:minmax(0,1fr) repeat(5,38px)!important;gap:7px!important;align-items:center!important;width:100%!important;margin:0 0 9px!important;padding:0!important}.appName{font-weight:900;font-size:20px;letter-spacing:-.6px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;padding:5px 0 7px}.appName:after{content:'CALCULATE  •  CONVERT  •  SIMPLIFY';display:block;font-size:7px;letter-spacing:1.1px;color:#8993a6;font-weight:800;margin-top:5px}.easyTitle{background:linear-gradient(135deg,#e87505,#f7a12e);-webkit-background-clip:text;background-clip:text;color:transparent}.topIcon{width:38px!important;height:38px!important;min-width:38px!important;min-height:38px!important;border:1px solid var(--line)!important;background:#fff!important;border-radius:12px!important;display:grid!important;place-items:center!important;color:#526078!important;box-shadow:0 5px 15px #1720330b!important;padding:0!important}.topIcon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.topIcon:active{transform:translateY(1px);background:#fff4e9!important;color:var(--orange)!important}
+          .display{background:#fff;border:1px solid var(--line);border-radius:20px;padding:15px 17px;margin-bottom:8px;min-height:190px;display:flex;flex-direction:column;justify-content:flex-end;box-shadow:0 8px 25px #1720330a;overflow:hidden}.displayHistory{min-height:0;max-height:82px;overflow:hidden;color:var(--muted);font-size:11px;text-align:right}.historyLine{display:flex;justify-content:flex-end;gap:5px}.expr{text-align:right;color:var(--muted);font-size:12px;min-height:18px;overflow:hidden}.result{text-align:right;font-size:clamp(40px,11vw,62px);font-weight:850;line-height:1.1;min-height:60px;overflow:hidden}.quick{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:8px}.quick button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 3px;color:var(--muted);font-size:11px;font-weight:750}.keys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.key{height:clamp(54px,10vh,78px);min-width:0;border:1px solid var(--line);background:#fff;border-radius:13px;font-size:20px;font-weight:800;color:#20283a;box-shadow:0 4px 12px #17203308}.key.op{background:#fff4e9;color:#d8750a;border-color:#f5d5b2}.key.eq{background:linear-gradient(135deg,#f28a16,#ffb347);color:#fff;border:0}.key.soft{background:#f5f7fb;color:#5c687d}.key.ac{background:#fff1f0;color:var(--danger);border-color:#f0c8c5}.key.ac:active{background:var(--danger);color:#fff}
           .note{text-align:center;color:#71809a;font-size:10px;padding-top:7px}.note button{font-size:10px}.overlay{position:fixed;inset:0;background:#17203355;backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}.overlay.show{display:flex}.modal{width:min(100%,470px);max-height:88vh;overflow:auto;background:#fff;border:1px solid #e3e7ef;border-radius:22px;padding:18px;box-shadow:0 25px 70px #17203330}.mhead{display:grid;grid-template-columns:1fr 38px;gap:10px;align-items:start;margin-bottom:14px}.mhead h2{margin:0;font-size:20px}.mhead p{margin:5px 0 0;color:var(--muted);font-size:12px}.close{width:36px;height:36px;border:1px solid var(--line);background:#f7f8fb;border-radius:50%;font-size:19px;color:#596478}.search{width:100%;border:1px solid var(--line);background:#fafbfe;border-radius:12px;padding:10px 12px;margin-bottom:12px;outline:none}.catgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.cat{border:1px solid #e1e6ef;background:#fff;border-radius:14px;padding:11px;text-align:left;display:grid;grid-template-columns:38px 1fr 14px;gap:9px;align-items:center;box-shadow:0 6px 18px #17203308}.ico{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-weight:900;font-size:15px}.blue{background:#edf3ff;color:#3767ff}.violet{background:#f2edff;color:#8259d9}.green{background:#eaf8f1;color:#169b62}.pink{background:#fff0f5;color:#e75b88}.cyan{background:#eaf9fc;color:#159bb5}.yellow{background:#fff7df;color:#c88900}.orange{background:#fff1e4;color:#d8750a}.gray{background:#f0f3f7;color:#68748a}.cat b{font-size:13px}.cat span{display:block;color:var(--muted);font-size:10px;line-height:1.25;margin-top:2px}.chev,.toolchev{color:#a1a9b8;font-size:17px}.toolgrid{display:grid;gap:9px}.tool{border:1px solid #e1e6ef;background:#fbfcff;border-radius:13px;padding:11px;text-align:left;display:grid;grid-template-columns:38px 1fr 14px;gap:9px;align-items:center;box-shadow:0 6px 18px #17203308}.toolico{width:38px;height:38px;border-radius:11px;background:#f1f4f9;color:#526079;display:grid;place-items:center;font-size:13px;font-weight:900}.tool b{display:block;font-size:13px}.tool span{display:block;color:var(--muted);font-size:10px;line-height:1.25}.toolform{display:grid;gap:10px}.toolform label{display:grid;gap:5px;color:var(--muted);font-size:11px;font-weight:700}.toolform input,.toolform select{width:100%;padding:11px;border:1px solid var(--line);border-radius:11px;background:#fff;outline:none}.primary{border:0;background:linear-gradient(135deg,#f28a16,#ffb347);color:#fff;padding:11px 14px;border-radius:11px;font-weight:800}.calcresult{padding:14px;border-radius:14px;background:#f5f8ff;border:1px solid #dfe6fa}.calcresult strong{display:block;font-size:24px;margin-bottom:3px}.calcresult small{color:var(--muted)}.hidden{display:none!important}
-          @media(max-width:500px){.top{grid-template-columns:minmax(0,1fr) repeat(5,34px)!important;gap:5px!important}.topIcon{width:34px!important;height:34px!important}.topIcon svg{width:18px;height:18px}.appName{font-size:18px}.keys{gap:7px}.key{height:clamp(50px,9.5vh,70px);font-size:18px}}
-          @media(max-width:360px){.top{grid-template-columns:minmax(0,1fr) repeat(5,30px)!important}.topIcon{width:30px!important;height:30px!important}.topIcon svg{width:16px;height:16px}.appName{font-size:16px}.appName:after{font-size:6px;letter-spacing:.7px}.keys{gap:6px}.key{height:48px;font-size:17px}}
-          @media(orientation:landscape) and (max-height:520px){.app{max-width:900px}.display{min-height:100px}.key{height:42px}}
+          @media(max-width:500px){.top{grid-template-columns:minmax(0,1fr) repeat(5,34px)!important;gap:5px!important}.topIcon{width:34px!important;height:34px!important}.topIcon svg{width:18px;height:18px}.appName{font-size:18px}.keys{gap:7px}.key{height:clamp(50px,9.5vh,70px);font-size:18px}}@media(max-width:360px){.top{grid-template-columns:minmax(0,1fr) repeat(5,30px)!important}.topIcon{width:30px!important;height:30px!important}.topIcon svg{width:16px;height:16px}.appName{font-size:16px}.appName:after{font-size:6px;letter-spacing:.7px}.keys{gap:6px}.key{height:48px;font-size:17px}}@media(orientation:landscape) and (max-height:520px){.app{max-width:900px}.display{min-height:100px}.key{height:42px}}
           </style>'''
           s=s.replace('</head>',css+'</head>',1)
-          # Root cause of non-working category calculators: the current UI has no #mode element.
-          old="function openCat(name){currentCat=name;document.getElementById('mode').textContent='Calculator · '+name;closeCats();renderTools()}"
-          new="function openCat(name){currentCat=name;var mode=document.getElementById('mode');if(mode)mode.textContent='Calculator · '+name;closeCats();renderTools()}"
-          if old in s:s=s.replace(old,new,1)
-          else:
-              s=s.replace("document.getElementById('mode').textContent='Calculator · '+name;closeCats();renderTools()","var mode=document.getElementById('mode');if(mode)mode.textContent='Calculator · '+name;closeCats();renderTools()",1)
+          s=s.replace("document.getElementById('mode').textContent='Calculator · '+name;closeCats();renderTools()","var mode=document.getElementById('mode');if(mode)mode.textContent='Calculator · '+name;closeCats();renderTools()",1)
           p.write_text(s)
           PY
-          test "$(grep -oi '<style' app/src/main/assets/index.html | wc -l)" -eq 1
-          grep -q 'var mode=document.getElementById('\''mode'\'');if(mode)' app/src/main/assets/index.html
-          grep -q 'class="key ac"' app/src/main/assets/index.html
+
+      - name: Apply Easy Calculator usability fixes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/assets/index.html'); s=p.read_text()
+          css='''.displayHistory .historyDelete{display:none!important}.displayHistory .historyLine strong{font-size:clamp(16px,4.6vw,25px);font-weight:800;line-height:1.35}.historyItemMain b{font-size:16px!important;line-height:1.35!important}.historyItemMain span{font-size:12px!important}.historyModal .historyDelete{display:grid!important}.settingsList{display:grid;gap:10px}.settingRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 13px;border:1px solid var(--line);background:#fbfcff;border-radius:13px}.settingRow b{font-size:13px}.settingRow span{display:block;color:var(--muted);font-size:10px;margin-top:2px}.settingBtn{border:1px solid #f0d7bb;background:#fff8f0;color:#b96500;border-radius:10px;padding:8px 11px;font-size:11px;font-weight:800}.settingsDanger{border-color:#ead6d3;background:#fff7f6;color:#c74d46}.settingsLink{width:100%;text-align:left;border:1px solid var(--line);background:#fbfcff;border-radius:13px;padding:12px 13px;color:var(--text);font-weight:750}'''
+          s=s.replace('</style>',css+'</style>',1)
+          s=s.replace('return `<div class="historyLine"><strong>${x.expression} = ${x.result}</strong><button class="historyDelete" type="button" aria-label="Padam history" onclick="deleteHistory(${idx})">×</button></div>`','return `<div class="historyLine"><strong>${x.expression} = ${x.result}</strong></div>`')
+          s=s.replace("if(currentCat==='Basic'){document.getElementById('app').classList.add('basicMode');document.getElementById('toolOverlay').classList.remove('show');return}","if(currentCat==='Basic'){document.getElementById('app').classList.remove('basicMode');const arr=tools.Basic||[];document.getElementById('toolTitle').textContent='Basic Calculators';document.getElementById('toolDesc').textContent='Pilih kalkulator asas yang anda perlukan';document.getElementById('toolBody').innerHTML='<div class=\"toolgrid\">'+arr.map(t=>`<button class=\"tool\" onclick=\"openTool('${t[1]}','${t[0]}','${t[2]}')\"><div class=\"toolico\">${toolIcons[t[1]]||'•'}</div><div><b>${t[0]}</b><span>${t[2]}</span></div><div class=\"toolchev\">›</div></button>`).join('')+'</div>';document.getElementById('toolOverlay').classList.add('show');return}")
+          s=s.replace("function openSettings(){alert('Tetapan Easy Calculator akan dikembangkan di sini.')}","function openSettings(){document.getElementById('settingsOverlay').classList.add('show');syncSettings()}function closeSettings(){document.getElementById('settingsOverlay').classList.remove('show')}function syncSettings(){const w=document.getElementById('wideToggle');if(w)w.textContent=document.documentElement.classList.contains('wideView')?'Aktif':'Mati'}function toggleWide(){document.documentElement.classList.toggle('wideView');syncSettings()}function clearAllHistory(){historyItems=[];renderDisplayHistory();openHistory()}")
+          s=s.replace("document.getElementById('gridBtn').onclick=openCalculator;","document.getElementById('gridBtn').onclick=openCats;")
+          s=s.replace('<button class="key soft calcOtherKey" aria-label="Reward" type="button">','<button class="key soft calcOtherKey" aria-label="Kalkulator lain" type="button" style="color:#f28a16;background:#fff8f0;border-color:#f0d7bb">')
+          marker='<div class="overlay" id="historyOverlay">'
+          settings='<div class="overlay" id="settingsOverlay"><div class="modal"><div class="mhead"><div><h2>Tetapan</h2><p>Ubah tetapan Easy Calculator</p></div><button class="close" onclick="closeSettings()">×</button></div><div class="settingsList"><div class="settingRow"><div><b>Paparan lebar</b><span>Besarkan ruang calculator pada skrin</span></div><button class="settingBtn" id="wideToggle" onclick="toggleWide()">Mati</button></div><button class="settingsLink" onclick="openHistory();closeSettings()">Lihat History</button><button class="settingsLink settingsDanger" onclick="clearAllHistory();closeSettings()">Padam semua History</button><button class="settingsLink" onclick="document.getElementById(\'ecPrivacyLink\').click();closeSettings()">Privacy Policy</button><button class="settingsLink" id="settingsPrivacyBtn" onclick="if(window.Android&&Android.showPrivacyOptions)Android.showPrivacyOptions()">Privacy Options</button></div></div></div>'
+          s=s.replace(marker,settings+marker)
+          s=s.replace("document.getElementById('moreBtn').onclick=openHistory;","document.getElementById('moreBtn').onclick=openHistory;const otherCalc=document.querySelector('.calcOtherKey');if(otherCalc)otherCalc.onclick=openCats;")
+          s=s.replace("document.getElementById('historyOverlay').addEventListener('click',e=>{if(e.target.id==='historyOverlay')closeHistory()});","document.getElementById('historyOverlay').addEventListener('click',e=>{if(e.target.id==='historyOverlay')closeHistory()});document.getElementById('settingsOverlay').addEventListener('click',e=>{if(e.target.id==='settingsOverlay')closeSettings()});")
+          p.write_text(s)
+          PY
+          grep -q 'id="settingsOverlay"' app/src/main/assets/index.html
+          grep -q "document.getElementById('gridBtn').onclick=openCats" app/src/main/assets/index.html
+          grep -q 'Kalkulator lain' app/src/main/assets/index.html
+          grep -q 'font-size:clamp(16px,4.6vw,25px)' app/src/main/assets/index.html
+
+      - name: Verify production AdMob configuration
+        shell: bash
+        run: |
+          grep -q 'ca-app-pub-9940728659432865~9855790743' app/src/main/AndroidManifest.xml
           grep -q 'ca-app-pub-9940728659432865/2663696435' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          grep -q 'ca-app-pub-9940728659432865/4188531092' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          grep -q 'ca-app-pub-9940728659432865/2875449427' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
 
-      - name: Build debug diagnostics
-        run: gradle :app:assembleDebug --stacktrace
-
-      - name: Build release APK
+      - name: Build User Production APK
         run: gradle clean assembleRelease --stacktrace
 
-      - name: Verify release APK
+      - name: Verify release APK exists
         shell: bash
         run: |
           set -e
@@ -89,16 +111,16 @@ jobs:
           ls -lh "$apk"
           sha256sum "$apk"
 
-      - name: Upload Easy Calculator release APK
+      - name: Upload User Production APK
         uses: actions/upload-artifact@v4
         with:
-          name: Easy-Calculator-1.0.2-Fixed
+          name: Easy-Calculator-User-Production
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
-      - name: Upload Easy Calculator debug APK
+      - name: Upload build metadata
         uses: actions/upload-artifact@v4
         with:
-          name: Easy-Calculator-Debug-Fixed
-          path: app/build/outputs/apk/debug/*.apk
+          name: Easy-Calculator-Build-Metadata
+          path: app/build/outputs/apk/release/output-metadata.json
           if-no-files-found: error
