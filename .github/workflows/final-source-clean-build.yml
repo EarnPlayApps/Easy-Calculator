@@ -9,7 +9,6 @@ permissions:
 
 jobs:
   release:
-    if: github.event.head_commit.message == 'Easy Calculator: stable final build'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -98,6 +97,10 @@ jobs:
           git add app/src/main/assets/index.html app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
           if git diff --cached --quiet; then exit 0; fi
           git commit -m 'Easy Calculator: permanently clean duplicate overrides'
-          git fetch origin main
-          git rebase origin/main
-          git push origin HEAD:main
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git rebase origin/main || { git rebase --abort || true; sleep 2; continue; }
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 2
+          done
+          exit 1
