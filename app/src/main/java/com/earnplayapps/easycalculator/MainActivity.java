@@ -57,6 +57,7 @@ public class MainActivity extends Activity {
  @Override protected void onDestroy(){handler.removeCallbacksAndMessages(null);if(banner!=null){try{banner.destroy();}catch(Exception ignored){}banner=null;}if(w!=null){try{w.destroy();}catch(Exception ignored){}w=null;}super.onDestroy();}
  public class Bridge{
   @JavascriptInterface public void showRewardedAd(){runOnUiThread(()->showReward());}
+  @JavascriptInterface public void minimizeApp(){runOnUiThread(()->{try{moveTaskToBack(true);}catch(Exception ignored){}});}
   @JavascriptInterface public void onNaturalTransition(){runOnUiThread(()->showInter());}
   @JavascriptInterface public void showPrivacyOptions(){runOnUiThread(()->showPrivacy());}
   @JavascriptInterface public boolean isPrivacyOptionsRequired(){return consent!=null&&consent.getPrivacyOptionsRequirementStatus()==ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED;}
