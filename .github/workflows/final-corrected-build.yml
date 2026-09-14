@@ -28,9 +28,9 @@ jobs:
           import re
           p=Path('app/src/main/assets/index.html')
           s=p.read_text()
-          # Top-icon panels stay open until their X is pressed. Remove all backdrop dismissal handlers.
+          # Top-icon panels stay open until their X is pressed. Remove only backdrop dismissal handlers.
           s=re.sub(r"\s*document\.getElementById\('(catOverlay|toolOverlay|historyOverlay|settingsOverlay)'\)\.addEventListener\('click',[^;]*;",'',s)
-          # Remove the obsolete auto-close helper and every invocation. Explicit X handlers remain untouched.
+          # Remove obsolete auto-close helper and invocations.
           s=re.sub(r"function closeAllOverlays\(\)\{.*?\}\s*",'',s,count=1,flags=re.S)
           s=s.replace('closeAllOverlays();','')
           # Ensure History has a clear return action and Settings -> History returns to Settings.
@@ -39,11 +39,19 @@ jobs:
           p.write_text(s)
           PY
           grep -q "Android.minimizeApp" app/src/main/assets/index.html
-          ! grep -q "addEventListener('click'" app/src/main/assets/index.html | true
+          ! grep -Eq "getElementById\('(catOverlay|toolOverlay|historyOverlay|settingsOverlay)'\)\.addEventListener\('click'" app/src/main/assets/index.html
           ! grep -q "function closeAllOverlays" app/src/main/assets/index.html
           ! grep -q "closeAllOverlays();" app/src/main/assets/index.html
           grep -q 'function backFromHistory()' app/src/main/assets/index.html
           grep -q 'minimizeApp' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+      - name: Verify responsive Easy Calculator UI
+        run: |
+          set -e
+          grep -q 'width=device-width' app/src/main/assets/index.html
+          grep -q 'viewport-fit=cover' app/src/main/assets/index.html
+          grep -q 'env(safe-area-inset' app/src/main/assets/index.html
+          grep -q '@media(max-width:' app/src/main/assets/index.html
+          grep -q '@media(orientation:landscape)' app/src/main/assets/index.html
       - name: Verify production AdMob IDs
         run: |
           grep -R -q 'ca-app-pub-9940728659432865/2663696435' app/src/main
@@ -61,8 +69,12 @@ jobs:
           sha256sum "$APK"
           unzip -p "$APK" assets/index.html > /tmp/easy-index.html
           ! grep -q "function closeAllOverlays" /tmp/easy-index.html
-          ! grep -q "addEventListener('click'" /tmp/easy-index.html
+          ! grep -Eq "getElementById\('(catOverlay|toolOverlay|historyOverlay|settingsOverlay)'\)\.addEventListener\('click'" /tmp/easy-index.html
           grep -q 'minimizeApp' /tmp/easy-index.html
+          grep -q 'viewport-fit=cover' /tmp/easy-index.html
+          unzip -p "$APK" AndroidManifest.xml > /tmp/easy-manifest.bin
+          strings /tmp/easy-manifest.bin | grep -q 'Easy Calculator'
+          strings /tmp/easy-manifest.bin | grep -q 'portrait'
       - name: Upload Easy Calculator final APK
         uses: actions/upload-artifact@v4
         with:
