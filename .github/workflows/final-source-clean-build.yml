@@ -1,0 +1,103 @@
+name: Easy Calculator Stable Final Build
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.event.head_commit.message == 'Easy Calculator: stable final build'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Accept SDK licenses
+        run: yes | sdkmanager --licenses || true
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Clean duplicated native WebView override
+        shell: bash
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java')
+          s=p.read_text()
+          start=s.index("w.setWebViewClient(new WebViewClient(){")
+          end=s.index("w.setWebChromeClient", start)
+          replacement="""w.setWebViewClient(new WebViewClient(){@Override public void onPageFinished(WebView v,String u){w.setVisibility(View.VISIBLE);w.evaluateJavascript(\"(function(){var g=document.getElementById('gridBtn');if(g)g.onclick=openCalculator;var c=document.querySelector('.calcOtherKey');if(c){c.onclick=openCats;c.setAttribute('aria-label','Kalkulator lain');c.style.color='#f28a16';c.style.background='#fff8f0';c.style.borderColor='#f0d7bb'}})()\",null);}});"""
+          s=s[:start]+replacement+s[end:]
+          p.write_text(s)
+          q=Path('app/src/main/assets/index.html')
+          h=q.read_text()
+          h=h.replace("function openCats(){closeAllOverlays();", "function openCats(){")
+          h=h.replace("function openHistory(from='home'){historyReturn=from;closeAllOverlays();", "function openHistory(from='home'){historyReturn=from;")
+          h=h.replace("function openSettings(){closeAllOverlays();", "function openSettings(){")
+          for x in [
+            "document.getElementById('catOverlay').addEventListener('click',e=>{if(e.target.id==='catOverlay')closeCats()});",
+            "document.getElementById('toolOverlay').addEventListener('click',e=>{if(e.target.id==='toolOverlay')closeTool()});",
+            "document.getElementById('historyOverlay').addEventListener('click',e=>{if(e.target.id==='historyOverlay')closeHistory()});",
+            "document.getElementById('settingsOverlay').addEventListener('click',e=>{if(e.target.id==='settingsOverlay')closeSettings()});"]:
+            h=h.replace(x,'')
+          q.write_text(h)
+          PY
+      - name: Verify source cleanup
+        run: |
+          set -e
+          grep -q 'moveTaskToBack(true)' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          grep -q 'ca-app-pub-9940728659432865/2663696435' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          grep -q 'ca-app-pub-9940728659432865/4188531092' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          grep -q 'ca-app-pub-9940728659432865/2875449427' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          grep -q 'consent.canRequestAds()' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          grep -q 'loadBanner()' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          test "$(grep -o 'function openCats' app/src/main/assets/index.html | wc -l)" -eq 1
+          test "$(grep -o 'function openHistory' app/src/main/assets/index.html | wc -l)" -eq 1
+          test "$(grep -o 'function openSettings' app/src/main/assets/index.html | wc -l)" -eq 1
+      - name: Build Easy Calculator release APK
+        run: gradle assembleRelease --stacktrace
+      - name: Verify final APK
+        shell: bash
+        run: |
+          set -e
+          apk=$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)
+          test -n "$apk"
+          unzip -t "$apk" >/dev/null
+          unzip -p "$apk" assets/index.html | grep -q 'class="key soft acKey"'
+          unzip -p "$apk" assets/index.html | grep -q 'Android.minimizeApp'
+          unzip -p "$apk" classes.dex | strings | grep -q 'moveTaskToBack'
+          sha256sum "$apk"
+          ls -lh "$apk"
+      - name: Upload final APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Easy-Calculator-Stable-Final
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+      - name: Permanently save cleaned source
+        shell: bash
+        run: |
+          set -e
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/assets/index.html app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Easy Calculator: permanently clean duplicate overrides'
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
