@@ -17,14 +17,18 @@ jobs:
           from pathlib import Path
           p=Path('app/src/main/assets/index.html')
           s=p.read_text()
-          s=s.replace('.calcOtherKey{color:#f28a16!important;', '.key.acKey{color:#d94b45!important;background:#fff7f6!important;border-color:#ead6d3!important}.key.acKey:active{background:#d94b45!important;color:#fff!important}.calcOtherKey{color:#f28a16!important;')
+          # AC must be visibly red in the calculator UI.
+          if '.key.acKey{' not in s:
+              s=s.replace('.calcOtherKey{color:#f28a16!important;', '.key.acKey{color:#d94b45!important;background:#fff7f6!important;border-color:#ead6d3!important}.key.acKey:active{background:#d94b45!important;color:#fff!important}.calcOtherKey{color:#f28a16!important;', 1)
           s=s.replace('<button class="key soft" onclick="clearAll()" aria-label="Padam semua">AC</button>', '<button class="key soft acKey" onclick="clearAll()" aria-label="Padam semua">AC</button>')
-          s=s.replace('document.getElementById(\'resizeBtn\').onclick=()=>document.documentElement.classList.toggle(\'wideView\');', "document.getElementById('resizeBtn').onclick=()=>{if(window.Android&&Android.minimizeApp){Android.minimizeApp()}else{document.documentElement.classList.toggle('wideView')}};")
+          # Top resize icon minimizes the Android task, not just a CSS view.
+          import re
+          s=re.sub(r"document\.getElementById\('resizeBtn'\)\.onclick=\(\)=>document\.documentElement\.classList\.toggle\('wideView'\);", "document.getElementById('resizeBtn').onclick=()=>{if(window.Android&&Android.minimizeApp){Android.minimizeApp()}else{document.documentElement.classList.toggle('wideView')}};", s)
           s=s.replace("document.getElementById('gridBtn').onclick=openCats;", "document.getElementById('gridBtn').onclick=openCalculator;")
           p.write_text(s)
           PY
           grep -q 'class="key soft acKey"' app/src/main/assets/index.html
-          grep -q "Android.minimizeApp" app/src/main/assets/index.html
+          grep -q 'Android.minimizeApp' app/src/main/assets/index.html
           grep -q "document.getElementById('gridBtn').onclick=openCalculator" app/src/main/assets/index.html
       - name: Commit fixes
         shell: bash
@@ -33,5 +37,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add app/src/main/assets/index.html
           if git diff --cached --quiet; then echo 'No changes needed'; exit 0; fi
-          git commit -m 'Apply final Easy Calculator UI fixes'
+          git commit -m 'Easy Calculator: finalize AC minimize and calculator navigation'
           git push
