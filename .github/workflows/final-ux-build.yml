@@ -20,25 +20,38 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
-      - name: Apply final UX fixes in build workspace
+      - name: Apply final Easy Calculator fixes in build workspace
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('app/src/main/assets/index.html');s=p.read_text()
-          if 'function closeAllOverlays()' not in s:
-            s=s.replace("function openHistory(from='home')", "function closeAllOverlays(){['catOverlay','toolOverlay','historyOverlay','settingsOverlay'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('show')})}\nfunction openHistory(from='home')")
-          s=s.replace("function openHistory(from='home'){historyReturn=from;document.getElementById('historyList')", "function openHistory(from='home'){historyReturn=from;closeAllOverlays();document.getElementById('historyList')")
-          s=s.replace("function openCats(){document.getElementById('catOverlay').classList.add('show');", "function openCats(){closeAllOverlays();document.getElementById('catOverlay').classList.add('show');")
-          s=s.replace("function openSettings(){document.getElementById('settingsOverlay').classList.add('show');", "function openSettings(){closeAllOverlays();document.getElementById('settingsOverlay').classList.add('show');")
-          s=s.replace("function openTool(id,title,desc){document.getElementById('toolTitle').textContent=title;", "function openTool(id,title,desc){closeAllOverlays();document.getElementById('toolTitle').textContent=title;")
-          s=s.replace("document.getElementById('moreBtn').onclick=openHistory;", "document.getElementById('moreBtn').onclick=()=>openHistory('home');")
-          if '.backBtn{' not in s:s=s.replace('</style>','.backBtn{height:36px;border:1px solid var(--line);background:#f7f8fb;color:#526078;border-radius:11px;padding:0 12px;font-size:12px;font-weight:800}.historyModal .mhead{grid-template-columns:1fr auto auto!important}</style>',1)
-          if 'backBtn' not in s:s=s.replace('<button class="close" onclick="closeHistory()">×</button></div><div id="historyList"','<button class="backBtn" onclick="backFromHistory()" type="button">← Kembali</button><button class="close" onclick="closeHistory()">×</button></div><div id="historyList"')
+          import re
+          p=Path('app/src/main/assets/index.html')
+          s=p.read_text()
+          # AC red.
+          if '.key.acKey{' not in s:
+              s=s.replace('.calcOtherKey{color:#f28a16!important;', '.key.acKey{color:#d94b45!important;background:#fff7f6!important;border-color:#ead6d3!important}.key.acKey:active{background:#d94b45!important;color:#fff!important}.calcOtherKey{color:#f28a16!important;', 1)
+          s=s.replace('<button class="key soft" onclick="clearAll()" aria-label="Padam semua">AC</button>', '<button class="key soft acKey" onclick="clearAll()" aria-label="Padam semua">AC</button>')
+          # Top minimize icon -> Android task minimize.
+          s=re.sub(r"document\.getElementById\('resizeBtn'\)\.onclick=\(\)=>document\.documentElement\.classList\.toggle\('wideView'\);", "document.getElementById('resizeBtn').onclick=()=>{if(window.Android&&Android.minimizeApp){Android.minimizeApp()}else{document.documentElement.classList.toggle('wideView')}};", s)
+          # Middle calculator icon only returns to Basic/main calculator. Bottom rotating icon remains Calculator Lain.
+          s=s.replace("document.getElementById('gridBtn').onclick=openCats;", "document.getElementById('gridBtn').onclick=openCalculator;")
+          # Keep overlays open when tapping backdrop; only explicit X/buttons close them.
+          s=re.sub(r"document\.querySelectorAll\('\.overlay'\)\.forEach\(o=>o\.addEventListener\('click',[^;]+;\);", "", s)
+          # History back button if missing; preserve existing backFromHistory when present.
+          if 'function backFromHistory()' not in s:
+              marker="function closeHistory()"
+              if marker in s:
+                  s=s.replace(marker, "function backFromHistory(){closeHistory();openSettings()}\n"+marker, 1)
+          if 'backBtn' not in s:
+              s=s.replace('</style>', '.backBtn{height:36px;border:1px solid var(--line);background:#f7f8fb;color:#526078;border-radius:11px;padding:0 12px;font-size:12px;font-weight:800}.historyModal .mhead{grid-template-columns:1fr auto auto!important}</style>', 1)
+          if '← Kembali' not in s:
+              s=s.replace('<button class="close" onclick="closeHistory()">×</button></div><div id="historyList"', '<button class="backBtn" onclick="backFromHistory()" type="button">← Kembali</button><button class="close" onclick="closeHistory()">×</button></div><div id="historyList"', 1)
           p.write_text(s)
           PY
-          grep -q 'function closeAllOverlays()' app/src/main/assets/index.html
-          grep -q 'function backFromHistory()' app/src/main/assets/index.html
+          grep -q 'class="key soft acKey"' app/src/main/assets/index.html
           grep -q 'Android.minimizeApp' app/src/main/assets/index.html
+          grep -q "document.getElementById('gridBtn').onclick=openCalculator" app/src/main/assets/index.html
+          grep -q 'function backFromHistory()' app/src/main/assets/index.html
           grep -q 'minimizeApp' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
       - name: Build release APK
         run: ./gradlew clean assembleRelease --no-daemon
@@ -46,8 +59,9 @@ jobs:
         run: |
           test -s app/build/outputs/apk/release/app-release.apk
           unzip -t app/build/outputs/apk/release/app-release.apk >/dev/null
-          unzip -p app/build/outputs/apk/release/app-release.apk assets/index.html | grep -q 'function closeAllOverlays()'
-          unzip -p app/build/outputs/apk/release/app-release.apk assets/index.html | grep -q 'function backFromHistory()'
+          unzip -p app/build/outputs/apk/release/app-release.apk assets/index.html | grep -q 'class="key soft acKey"'
+          unzip -p app/build/outputs/apk/release/app-release.apk assets/index.html | grep -q 'Android.minimizeApp'
+          unzip -p app/build/outputs/apk/release/app-release.apk assets/index.html | grep -q "document.getElementById('gridBtn').onclick=openCalculator"
           unzip -p app/build/outputs/apk/release/app-release.apk classes.dex | strings | grep -q 'moveTaskToBack'
       - uses: actions/upload-artifact@v4
         with:
