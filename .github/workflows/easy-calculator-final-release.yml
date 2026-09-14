@@ -8,6 +8,9 @@ on:
 permissions:
   contents: write
 
+env:
+  EASY_CALCULATOR_RELEASE_LOCK: '2026-09-15-banner-final'
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -31,50 +34,53 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
-      - name: Permanently lock Easy Calculator requested behavior
+      - name: Clean duplicated native WebView override
         shell: bash
         run: |
           set -e
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('app/src/main/assets/index.html')
+          p=Path('app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java')
           s=p.read_text()
-          if '.key.acKey{' not in s:
-              s=s.replace('</style>', '.key.acKey{color:#d94b45!important;background:#fff7f6!important;border-color:#ead6d3!important}.key.acKey:active{background:#d94b45!important;color:#fff!important}</style>', 1)
-          s=s.replace('<button class="key soft" onclick="clearAll()" aria-label="Padam semua">AC</button>', '<button class="key soft acKey" onclick="clearAll()" aria-label="Padam semua">AC</button>')
-          marker='// EASY_CALCULATOR_FINAL_BEHAVIOR_LOCK'
-          if marker not in s:
-              lock="""<script>
-          // EASY_CALCULATOR_FINAL_BEHAVIOR_LOCK
-          (function(){
-            var r=document.getElementById('resizeBtn');
-            if(r) r.onclick=function(){
-              if(window.Android && typeof Android.minimizeApp==='function') Android.minimizeApp();
-              else document.documentElement.classList.toggle('wideView');
-            };
-            var g=document.getElementById('gridBtn');
-            if(g) g.onclick=function(){ if(typeof openCalculator==='function') openCalculator(); };
-            var c=document.querySelector('.calcOtherKey');
-            if(c) c.onclick=function(){ if(typeof openCats==='function') openCats(); };
-          })();
-          </script>"""
-              s=s.replace('</body>', lock+'\n</body>', 1)
+          start=s.find("w.setWebViewClient(new WebViewClient(){")
+          end=s.find("w.setWebChromeClient", start)
+          if start >= 0 and end > start:
+              replacement="""w.setWebViewClient(new WebViewClient(){@Override public void onPageFinished(WebView v,String u){w.setVisibility(View.VISIBLE);w.evaluateJavascript(\"(function(){var g=document.getElementById('gridBtn');if(g)g.onclick=openCalculator;var c=document.querySelector('.calcOtherKey');if(c){c.onclick=openCats;c.setAttribute('aria-label','Kalkulator lain');c.style.color='#f28a16';c.style.background='#fff8f0';c.style.borderColor='#f0d7bb'}})()\",null);}});"""
+              s=s[:start]+replacement+s[end:]
           p.write_text(s)
-          q=Path('app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java')
-          j=q.read_text()
-          for a,b in [
-            ('Log.e(TAG,"Consent form error",e);','Log.e(TAG,"Consent form error: "+e);'),
-            ('Log.e(TAG,"Consent update error",e);','Log.e(TAG,"Consent update error: "+e);'),
-            ('Log.e(TAG,"Privacy options error",e);','Log.e(TAG,"Privacy options error: "+e);'),
-            ('Log.e(TAG,"Interstitial show failed",e);','Log.e(TAG,"Interstitial show failed: "+e);'),
-            ('Log.e(TAG,"Rewarded show failed",e);','Log.e(TAG,"Rewarded show failed: "+e);')]: j=j.replace(a,b)
-          q.write_text(j)
-          if 'moveTaskToBack(true)' not in j: raise SystemExit('Native minimize bridge missing')
+          q=Path('app/src/main/assets/index.html')
+          h=q.read_text()
+          h=h.replace("function openCats(){closeAllOverlays();", "function openCats(){")
+          h=h.replace("function openHistory(from='home'){historyReturn=from;closeAllOverlays();", "function openHistory(from='home'){historyReturn=from;")
+          h=h.replace("function openSettings(){closeAllOverlays();", "function openSettings(){")
+          for x in [
+            "document.getElementById('catOverlay').addEventListener('click',e=>{if(e.target.id==='catOverlay')closeCats()});",
+            "document.getElementById('toolOverlay').addEventListener('click',e=>{if(e.target.id==='toolOverlay')closeTool()});",
+            "document.getElementById('historyOverlay').addEventListener('click',e=>{if(e.target.id==='historyOverlay')closeHistory()});",
+            "document.getElementById('settingsOverlay').addEventListener('click',e=>{if(e.target.id==='settingsOverlay')closeSettings()});"]:
+              h=h.replace(x,'')
+          h=h.replace('<button class="key soft" onclick="clearAll()" aria-label="Padam semua">AC</button>','<button class="key soft acKey" onclick="clearAll()" aria-label="Padam semua">AC</button>')
+          if '.acKey{' not in h:
+              h=h.replace('</style></head>',' .acKey{color:#d94b45!important;background:#fff7f6!important;border-color:#ead6d3!important}.acKey:active{background:#d94b45!important;color:#fff!important}</style></head>',1)
+          q.write_text(h)
           PY
-          grep -q 'class="key soft acKey"' app/src/main/assets/index.html
-          grep -q 'EASY_CALCULATOR_FINAL_BEHAVIOR_LOCK' app/src/main/assets/index.html
-          grep -q 'Android.minimizeApp' app/src/main/assets/index.html
+      - name: Verify source cleanup
+        run: |
+          set -e
           grep -q 'moveTaskToBack(true)' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          grep -q 'ca-app-pub-9940728659432865/2663696435' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          grep -q 'ca-app-pub-9940728659432865/4188531092' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          grep -q 'ca-app-pub-9940728659432865/2875449427' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          grep -q 'consent.canRequestAds()' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          grep -q 'loadBanner()' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          test "$(grep -o 'function openCats' app/src/main/assets/index.html | wc -l)" -eq 1
+          test "$(grep -o 'function openHistory' app/src/main/assets/index.html | wc -l)" -eq 1
+          test "$(grep -o 'function openSettings' app/src/main/assets/index.html | wc -l)" -eq 1
+          grep -q 'acKey' app/src/main/assets/index.html
+          ! grep -q 'catOverlay.*addEventListener.*click' app/src/main/assets/index.html
+          ! grep -q 'toolOverlay.*addEventListener.*click' app/src/main/assets/index.html
+          ! grep -q 'historyOverlay.*addEventListener.*click' app/src/main/assets/index.html
+          ! grep -q 'settingsOverlay.*addEventListener.*click' app/src/main/assets/index.html
       - name: Verify production AdMob configuration
         run: |
           set -e
@@ -82,8 +88,6 @@ jobs:
           grep -q 'ca-app-pub-9940728659432865/2663696435' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
           grep -q 'ca-app-pub-9940728659432865/4188531092' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
           grep -q 'ca-app-pub-9940728659432865/2875449427' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
-          grep -q 'consent.canRequestAds()' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
-          grep -q 'loadBanner()' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
       - name: Build Easy Calculator release APK
         run: gradle assembleRelease --stacktrace
       - name: Verify final APK
@@ -94,7 +98,6 @@ jobs:
           test -n "$apk"
           unzip -t "$apk" >/dev/null
           unzip -p "$apk" assets/index.html | grep -q 'class="key soft acKey"'
-          unzip -p "$apk" assets/index.html | grep -q 'EASY_CALCULATOR_FINAL_BEHAVIOR_LOCK'
           unzip -p "$apk" assets/index.html | grep -q 'Android.minimizeApp'
           unzip -p "$apk" assets/index.html | grep -q 'openCalculator'
           unzip -p "$apk" classes.dex | strings | grep -q 'moveTaskToBack'
@@ -106,28 +109,28 @@ jobs:
           name: Easy-Calculator-Final-Release
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
-      - name: Commit permanent source lock
+      - name: Permanently save cleaned source
         shell: bash
         run: |
           set -e
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add app/src/main/assets/index.html app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
-          if git diff --cached --quiet; then echo 'Source already locked'; exit 0; fi
-          git commit -m 'Easy Calculator: permanently lock requested final behavior'
+          if git diff --cached --quiet; then echo 'Source already clean'; exit 0; fi
+          git commit -m 'Easy Calculator: permanently save final release source'
           for i in 1 2 3 4 5; do
             git fetch origin main
             git rebase origin/main || { git rebase --abort || true; sleep 2; continue; }
             if git push origin HEAD:main; then exit 0; fi
             sleep 2
           done
-          echo 'Could not push permanent source lock after retries'
           exit 1
       - name: Final source consistency check
-        shell: bash
         run: |
           set -e
-          test "$(grep -o 'EASY_CALCULATOR_FINAL_BEHAVIOR_LOCK' app/src/main/assets/index.html | wc -l)" -eq 1
-          test "$(grep -o 'moveTaskToBack(true)' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java | wc -l)" -eq 1
-          test "$(grep -o 'loadBanner()' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java | wc -l)" -ge 1
-          echo 'Final source consistency checks passed.'
+          test "$(grep -o 'function openCats' app/src/main/assets/index.html | wc -l)" -eq 1
+          test "$(grep -o 'function openHistory' app/src/main/assets/index.html | wc -l)" -eq 1
+          test "$(grep -o 'function openSettings' app/src/main/assets/index.html | wc -l)" -eq 1
+          grep -q 'moveTaskToBack(true)' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          grep -q 'loadBanner()' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          echo 'Easy Calculator final source consistency passed.'
