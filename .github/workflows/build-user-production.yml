@@ -48,6 +48,20 @@ jobs:
           p.write_text(s)
           PY
 
+      - name: Apply final calculator UI guard
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/assets/index.html')
+          s=p.read_text()
+          marker='<!-- EASY_CALCULATOR_PRODUCTION_UI_GUARD -->'
+          css='''<style id="production-ui-guard">\n.keys .key:first-child{color:#d94b45!important;background:#fff1f0!important;border-color:#f0c8c5!important}\n.keys .key:first-child:active{background:#d94b45!important;color:#fff!important}\n</style>'''
+          if marker not in s:
+              s=s.replace('</head>', marker+'\n'+css+'\n</head>', 1)
+          p.write_text(s)
+          PY
+
       - name: Verify production AdMob configuration
         run: |
           grep -q 'ca-app-pub-9940728659432865~9855790743' app/src/main/AndroidManifest.xml
@@ -57,6 +71,13 @@ jobs:
 
       - name: Build User Production APK
         run: gradle assembleRelease --stacktrace
+
+      - name: Verify release APK exists
+        shell: bash
+        run: |
+          set -e
+          test -n "$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)"
+          ls -lh app/build/outputs/apk/release/*.apk
 
       - name: Upload User Production APK
         uses: actions/upload-artifact@v4
