@@ -66,8 +66,18 @@ jobs:
           </script>"""
               s=s.replace('</body>', lock+'\n</body>', 1)
           p.write_text(s)
+
           q=Path('app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java')
-          if 'moveTaskToBack(true)' not in q.read_text(): raise SystemExit('Native minimize bridge missing')
+          j=q.read_text()
+          # Ad SDK error objects are not Throwables in the current dependency version.
+          # Keep full diagnostics while logging their message fields explicitly.
+          j=j.replace('Log.e(TAG,"Consent form error",e);','Log.e(TAG,"Consent form error: "+e);')
+          j=j.replace('Log.e(TAG,"Consent update error",e);','Log.e(TAG,"Consent update error: "+e);')
+          j=j.replace('Log.e(TAG,"Privacy options error",e);','Log.e(TAG,"Privacy options error: "+e);')
+          j=j.replace('Log.e(TAG,"Interstitial show failed",e);','Log.e(TAG,"Interstitial show failed: "+e);')
+          j=j.replace('Log.e(TAG,"Rewarded show failed",e);','Log.e(TAG,"Rewarded show failed: "+e);')
+          q.write_text(j)
+          if 'moveTaskToBack(true)' not in j: raise SystemExit('Native minimize bridge missing')
           PY
           grep -q 'class="key soft acKey"' app/src/main/assets/index.html
           grep -q 'EASY_CALCULATOR_FINAL_BEHAVIOR_LOCK' app/src/main/assets/index.html
