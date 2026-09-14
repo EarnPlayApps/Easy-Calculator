@@ -44,24 +44,16 @@ jobs:
           java -version 2>&1 | tee -a diagnosis/java-version.txt
           echo '=== GRADLE ===' | tee diagnosis/gradle-version.txt
           gradle --version 2>&1 | tee -a diagnosis/gradle-version.txt
-          echo '=== AAR METADATA ===' | tee diagnosis/aar.log
-          gradle :app:checkDebugAarMetadata --stacktrace --console=plain 2>&1 | tee -a diagnosis/aar.log
-          AAR=${PIPESTATUS[0]}
-          echo "AAR_EXIT=$AAR" | tee -a diagnosis/aar.log
-          echo '=== RESOURCES ===' | tee diagnosis/resources.log
-          gradle :app:processDebugResources --stacktrace --console=plain 2>&1 | tee -a diagnosis/resources.log
-          RES=${PIPESTATUS[0]}
-          echo "RES_EXIT=$RES" | tee -a diagnosis/resources.log
-          echo '=== JAVAC ===' | tee diagnosis/javac.log
-          gradle :app:compileDebugJavaWithJavac --stacktrace --console=plain 2>&1 | tee -a diagnosis/javac.log
-          JAVAC=${PIPESTATUS[0]}
-          echo "JAVAC_EXIT=$JAVAC" | tee -a diagnosis/javac.log
-          echo '=== FULL BUILD ===' | tee diagnosis/build.log
+          echo '=== DEBUG BUILD ===' | tee diagnosis/build.log
           gradle :app:assembleDebug --stacktrace --console=plain 2>&1 | tee -a diagnosis/build.log
           BUILD=${PIPESTATUS[0]}
           echo "BUILD_EXIT=$BUILD" | tee -a diagnosis/build.log
-          echo "AAR=$AAR RES=$RES JAVAC=$JAVAC BUILD=$BUILD" | tee diagnosis/result.txt
-          if [ "$JAVAC" -ne 0 ]; then exit "$JAVAC"; fi
+          echo '=== RELEASE BUILD ===' | tee diagnosis/release-build.log
+          gradle :app:assembleRelease --stacktrace --console=plain 2>&1 | tee -a diagnosis/release-build.log
+          RELEASE=${PIPESTATUS[0]}
+          echo "RELEASE_EXIT=$RELEASE" | tee -a diagnosis/release-build.log
+          echo "DEBUG=$BUILD RELEASE=$RELEASE" | tee diagnosis/result.txt
+          if [ "$RELEASE" -ne 0 ]; then exit "$RELEASE"; fi
           if [ "$BUILD" -ne 0 ]; then exit "$BUILD"; fi
 
       - name: Upload diagnosis logs
