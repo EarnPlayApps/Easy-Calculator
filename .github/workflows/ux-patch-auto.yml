@@ -1,0 +1,56 @@
+name: Easy Calculator UX Patch
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Patch UX
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('app/src/main/assets/index.html');s=p.read_text()
+          if '.backBtn{' not in s:s=s.replace('</style>','<style>.backBtn{height:36px;border:1px solid var(--line);background:#f7f8fb;color:#526078;border-radius:11px;padding:0 12px;font-size:12px;font-weight:800}.historyModal .mhead{grid-template-columns:1fr auto auto!important;align-items:center!important}</style></head>',1)
+          s=s.replace('<div class="mhead"><div><h2>History</h2><p>Pengiraan terakhir anda</p></div><button class="close" onclick="closeHistory()">×</button></div>','<div class="mhead"><div><h2>History</h2><p>Pengiraan terakhir anda</p></div><button class="backBtn" onclick="backFromHistory()" type="button">← Kembali</button><button class="close" onclick="closeHistory()" aria-label="Tutup">×</button></div>',1)
+          if 'function backFromHistory()' not in s:
+            a=s.find('function openHistory()');b=s.find('function openCalculator()',a)
+            if a>=0 and b>a:
+              block="""let historyReturn='home';
+function closeAllOverlays(){['catOverlay','toolOverlay','historyOverlay','settingsOverlay'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('show')})}
+function openHistory(from='home'){historyReturn=from;closeAllOverlays();document.getElementById('historyList').innerHTML=historyItems.length?historyItems.map((x,i)=>`<div class=\"historyItem\"><div class=\"historyItemMain\"><b>${x.expression?x.expression+' = '+x.result:x.result}</b><span>${x.title}</span></div><button class=\"historyDelete\" type=\"button\" onclick=\"deleteHistoryItem(${i})\" aria-label=\"Padam history\" title=\"Padam\">×</button></div>`).join(''):'<div class=\"historyEmpty\">Belum ada pengiraan.</div>';document.getElementById('historyOverlay').classList.add('show')}
+function closeHistory(){document.getElementById('historyOverlay').classList.remove('show')}
+function backFromHistory(){const r=historyReturn;closeHistory();if(r==='settings')openSettings()}
+function openSettings(){closeAllOverlays();document.getElementById('settingsOverlay').classList.add('show');syncSettings()}
+function closeSettings(){document.getElementById('settingsOverlay').classList.remove('show')}
+function syncSettings(){const w=document.getElementById('wideToggle');if(w)w.textContent=document.documentElement.classList.contains('wideView')?'Aktif':'Mati'}
+function toggleWide(){document.documentElement.classList.toggle('wideView');syncSettings()}
+function clearAllHistory(){historyItems=[];renderDisplayHistory();openHistory('settings')}
+"""
+              s=s[:a]+block+s[b:]
+          s=s.replace("function openCats(){document.getElementById('catOverlay').classList.add('show');renderCats();if(window.Android&&Android.onNaturalTransition)Android.onNaturalTransition()}","function openCats(){closeAllOverlays();document.getElementById('catOverlay').classList.add('show');renderCats();if(window.Android&&Android.onNaturalTransition)Android.onNaturalTransition()}")
+          s=s.replace("function openTool(id,title,desc){document.getElementById('toolTitle').textContent=title;","function openTool(id,title,desc){closeAllOverlays();document.getElementById('toolTitle').textContent=title;")
+          s=s.replace('onclick="openHistory();closeSettings()">Lihat History','onclick="openHistory(\'settings\')">Lihat History')
+          s=s.replace("document.getElementById('moreBtn').onclick=openHistory;","document.getElementById('moreBtn').onclick=()=>openHistory('home');")
+          s=s.replace("document.getElementById('resizeBtn').onclick=()=>document.documentElement.classList.toggle('wideView');","document.getElementById('resizeBtn').onclick=()=>{if(window.Android&&Android.minimizeApp)Android.minimizeApp();else document.documentElement.classList.toggle('wideView')};")
+          p.write_text(s)
+          j=Path('app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java');t=j.read_text()
+          if 'void minimizeApp()' not in t:t=t.replace('@JavascriptInterface public void showRewardedAd(){runOnUiThread(()->showReward());}','@JavascriptInterface public void showRewardedAd(){runOnUiThread(()->showReward());}\n  @JavascriptInterface public void minimizeApp(){runOnUiThread(()->{try{moveTaskToBack(true);}catch(Exception ignored){}});}',1)
+          j.write_text(t)
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app/src/main/assets/index.html app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Easy Calculator: improve minimize and history navigation"
+          git push origin HEAD:main
