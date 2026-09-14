@@ -123,3 +123,11 @@ jobs:
           done
           echo 'Could not push permanent source lock after retries'
           exit 1
+      - name: Final source consistency check
+        shell: bash
+        run: |
+          set -e
+          test "$(grep -o 'EASY_CALCULATOR_FINAL_BEHAVIOR_LOCK' app/src/main/assets/index.html | wc -l)" -eq 1
+          test "$(grep -o 'moveTaskToBack(true)' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java | wc -l)" -eq 1
+          test "$(grep -o 'loadBanner()' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java | wc -l)" -ge 1
+          echo 'Final source consistency checks passed.'
