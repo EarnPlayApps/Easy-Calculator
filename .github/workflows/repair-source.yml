@@ -1,0 +1,37 @@
+name: Repair Easy Calculator source
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore and patch source
+        run: |
+          git checkout e58b461d7a4f80136bde926170444c9d1019f260^ -- app/src/main/assets/index.html
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/assets/index.html'); s=p.read_text()
+          s=s.replace('</style>','\n.displayHistory .historyDelete{display:none!important}.displayHistory .historyLine strong{font-size:clamp(16px,4.6vw,25px);font-weight:800;line-height:1.35}.historyItemMain b{font-size:16px!important;line-height:1.35!important}.historyItemMain span{font-size:12px!important}.historyModal .historyDelete{display:grid!important}.settingsList{display:grid;gap:10px}.settingRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 13px;border:1px solid var(--line);background:#fbfcff;border-radius:13px}.settingRow b{font-size:13px}.settingRow span{display:block;color:var(--muted);font-size:10px;margin-top:2px}.settingBtn{border:1px solid #f0d7bb;background:#fff8f0;color:#b96500;border-radius:10px;padding:8px 11px;font-size:11px;font-weight:800}.settingsDanger{border-color:#ead6d3;background:#fff7f6;color:#c74d46}.settingsLink{width:100%;text-align:left;border:1px solid var(--line);background:#fbfcff;border-radius:13px;padding:12px 13px;color:var(--text);font-weight:750}\n</style>',1)
+          s=s.replace('return `<div class="historyLine"><strong>${x.expression} = ${x.result}</strong><button class="historyDelete" type="button" aria-label="Padam history" onclick="deleteHistory(${idx})">×</button></div>`','return `<div class="historyLine"><strong>${x.expression} = ${x.result}</strong></div>`')
+          s=s.replace("if(currentCat==='Basic'){document.getElementById('app').classList.add('basicMode');document.getElementById('toolOverlay').classList.remove('show');return}","if(currentCat==='Basic'){document.getElementById('app').classList.remove('basicMode');const arr=tools.Basic||[];document.getElementById('toolTitle').textContent='Basic Calculators';document.getElementById('toolDesc').textContent='Pilih kalkulator asas yang anda perlukan';document.getElementById('toolBody').innerHTML='<div class=\"toolgrid\">'+arr.map(t=>`<button class=\"tool\" onclick=\"openTool('${t[1]}','${t[0]}','${t[2]}')\"><div class=\"toolico\">${toolIcons[t[1]]||'•'}</div><div><b>${t[0]}</b><span>${t[2]}</span></div><div class=\"toolchev\">›</div></button>`).join('')+'</div>';document.getElementById('toolOverlay').classList.add('show');return}")
+          s=s.replace("function openSettings(){alert('Tetapan Easy Calculator akan dikembangkan di sini.')}","function openSettings(){document.getElementById('settingsOverlay').classList.add('show');syncSettings()}function closeSettings(){document.getElementById('settingsOverlay').classList.remove('show')}function syncSettings(){const w=document.getElementById('wideToggle');if(w)w.textContent=document.documentElement.classList.contains('wideView')?'Aktif':'Mati'}function toggleWide(){document.documentElement.classList.toggle('wideView');syncSettings()}function clearAllHistory(){historyItems=[];renderDisplayHistory();openHistory()}")
+          s=s.replace("document.getElementById('gridBtn').onclick=openCalculator;","document.getElementById('gridBtn').onclick=openCats;")
+          s=s.replace('<button class="key soft calcOtherKey" aria-label="Reward" type="button">','<button class="key soft calcOtherKey" aria-label="Kalkulator lain" type="button" style="color:#f28a16;background:#fff8f0;border-color:#f0d7bb">')
+          marker='<div class="overlay" id="historyOverlay">'
+          settings='<div class="overlay" id="settingsOverlay"><div class="modal"><div class="mhead"><div><h2>Tetapan</h2><p>Ubah tetapan Easy Calculator</p></div><button class="close" onclick="closeSettings()">×</button></div><div class="settingsList"><div class="settingRow"><div><b>Paparan lebar</b><span>Besarkan ruang calculator pada skrin</span></div><button class="settingBtn" id="wideToggle" onclick="toggleWide()">Mati</button></div><button class="settingsLink" onclick="openHistory();closeSettings()">Lihat History</button><button class="settingsLink settingsDanger" onclick="clearAllHistory();closeSettings()">Padam semua History</button><button class="settingsLink" onclick="document.getElementById(\'ecPrivacyLink\').click();closeSettings()">Privacy Policy</button><button class="settingsLink" id="settingsPrivacyBtn" onclick="if(window.Android&&Android.showPrivacyOptions)Android.showPrivacyOptions()">Privacy Options</button></div></div></div>'
+          s=s.replace(marker,settings+marker)
+          s=s.replace("document.getElementById('moreBtn').onclick=openHistory;","document.getElementById('moreBtn').onclick=openHistory;const otherCalc=document.querySelector('.calcOtherKey');if(otherCalc)otherCalc.onclick=openCats;")
+          s=s.replace("document.getElementById('historyOverlay').addEventListener('click',e=>{if(e.target.id==='historyOverlay')closeHistory()});","document.getElementById('historyOverlay').addEventListener('click',e=>{if(e.target.id==='historyOverlay')closeHistory()});document.getElementById('settingsOverlay').addEventListener('click',e=>{if(e.target.id==='settingsOverlay')closeSettings()});")
+          p.write_text(s)
+          PY
+          git config user.name 'github-actions[bot]'; git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/assets/index.html
+          git commit -m 'Easy Calculator: restore source and apply usability fixes' || exit 0
+          git push
