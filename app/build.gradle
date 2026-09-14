@@ -1,9 +1,29 @@
 plugins { id 'com.android.application' }
 
-android { namespace 'com.earnplayapps.easycalculator'; compileSdk 36
+android {
+    namespace 'com.earnplayapps.easycalculator'
+    compileSdk 36
+
     buildFeatures { buildConfig true }
-    defaultConfig { applicationId 'com.earnplayapps.easycalculator'; minSdk 23; targetSdk 36; versionCode 2; versionName '1.0.1' }
-    buildTypes { release { signingConfig signingConfigs.debug } }
+
+    defaultConfig {
+        applicationId 'com.earnplayapps.easycalculator'
+        minSdk 23
+        targetSdk 36
+        versionCode 3
+        versionName '1.0.2'
+    }
+
+    buildTypes {
+        release {
+            // Explicitly produce a normal installable release APK.
+            // Keep v1 for older Android compatibility and v2 for Android 7+.
+            signingConfig signingConfigs.debug
+            minifyEnabled false
+            shrinkResources false
+            debuggable false
+        }
+    }
 }
 
 dependencies {
