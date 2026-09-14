@@ -1,0 +1,56 @@
+name: Easy Calculator Final UX Build
+on:
+  push:
+    branches: [ main ]
+permissions:
+  contents: read
+  actions: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Apply final UX fixes in build workspace
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/assets/index.html');s=p.read_text()
+          if 'function closeAllOverlays()' not in s:
+            s=s.replace("function openHistory(from='home')", "function closeAllOverlays(){['catOverlay','toolOverlay','historyOverlay','settingsOverlay'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('show')})}\nfunction openHistory(from='home')")
+          s=s.replace("function openHistory(from='home'){historyReturn=from;document.getElementById('historyList')", "function openHistory(from='home'){historyReturn=from;closeAllOverlays();document.getElementById('historyList')")
+          s=s.replace("function openCats(){document.getElementById('catOverlay').classList.add('show');", "function openCats(){closeAllOverlays();document.getElementById('catOverlay').classList.add('show');")
+          s=s.replace("function openSettings(){document.getElementById('settingsOverlay').classList.add('show');", "function openSettings(){closeAllOverlays();document.getElementById('settingsOverlay').classList.add('show');")
+          s=s.replace("function openTool(id,title,desc){document.getElementById('toolTitle').textContent=title;", "function openTool(id,title,desc){closeAllOverlays();document.getElementById('toolTitle').textContent=title;")
+          s=s.replace("document.getElementById('moreBtn').onclick=openHistory;", "document.getElementById('moreBtn').onclick=()=>openHistory('home');")
+          if '.backBtn{' not in s:s=s.replace('</style>','.backBtn{height:36px;border:1px solid var(--line);background:#f7f8fb;color:#526078;border-radius:11px;padding:0 12px;font-size:12px;font-weight:800}.historyModal .mhead{grid-template-columns:1fr auto auto!important}</style>',1)
+          if 'backBtn' not in s:s=s.replace('<button class="close" onclick="closeHistory()">×</button></div><div id="historyList"','<button class="backBtn" onclick="backFromHistory()" type="button">← Kembali</button><button class="close" onclick="closeHistory()">×</button></div><div id="historyList"')
+          p.write_text(s)
+          PY
+          grep -q 'function closeAllOverlays()' app/src/main/assets/index.html
+          grep -q 'function backFromHistory()' app/src/main/assets/index.html
+          grep -q 'Android.minimizeApp' app/src/main/assets/index.html
+          grep -q 'minimizeApp' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
+      - name: Build release APK
+        run: ./gradlew clean assembleRelease --no-daemon
+      - name: Verify APK
+        run: |
+          test -s app/build/outputs/apk/release/app-release.apk
+          unzip -t app/build/outputs/apk/release/app-release.apk >/dev/null
+          unzip -p app/build/outputs/apk/release/app-release.apk assets/index.html | grep -q 'function closeAllOverlays()'
+          unzip -p app/build/outputs/apk/release/app-release.apk assets/index.html | grep -q 'function backFromHistory()'
+          unzip -p app/build/outputs/apk/release/app-release.apk classes.dex | strings | grep -q 'moveTaskToBack'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Easy-Calculator-Final-UX
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
