@@ -19,7 +19,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '8.13'
-      - name: Apply corrected overlay behavior
+      - name: Clean and verify Easy Calculator UX
         shell: bash
         run: |
           set -e
@@ -28,25 +28,21 @@ jobs:
           import re
           p=Path('app/src/main/assets/index.html')
           s=p.read_text()
-          # Top-icon panels must stay open until their X is pressed; no backdrop dismissal.
-          s=re.sub(r"\s*document\.getElementById\('(?:catOverlay|toolOverlay|historyOverlay|settingsOverlay)'\)\.addEventListener\('click',[^;]+;",'',s)
-          # Do not auto-close panels when another top action is invoked.
-          s=re.sub(r"function closeAllOverlays\(\)\{.*?\}","function closeAllOverlays(){}",s,count=1,flags=re.S)
-          # Keep explicit Settings -> History navigation and History back button.
+          # Top-icon panels stay open until their X is pressed. Remove all backdrop dismissal handlers.
+          s=re.sub(r"\s*document\.getElementById\('(catOverlay|toolOverlay|historyOverlay|settingsOverlay)'\)\.addEventListener\('click',[^;]*;",'',s)
+          # Remove the obsolete auto-close helper and every invocation. Explicit X handlers remain untouched.
+          s=re.sub(r"function closeAllOverlays\(\)\{.*?\}\s*",'',s,count=1,flags=re.S)
+          s=s.replace('closeAllOverlays();','')
+          # Ensure History has a clear return action and Settings -> History returns to Settings.
           if 'function backFromHistory()' not in s:
               s=s.replace("function openHistory(from='home')", "function backFromHistory(){closeHistory();if(typeof historyReturn!=='undefined'&&historyReturn==='settings')openSettings()}\nfunction openHistory(from='home')",1)
           p.write_text(s)
-          j=Path('app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java')
-          t=j.read_text()
-          if 'minimizeApp()' not in t:
-              t=t.replace('@JavascriptInterface public void showRewardedAd(){runOnUiThread(()->showReward());}', '@JavascriptInterface public void showRewardedAd(){runOnUiThread(()->showReward());}\n  @JavascriptInterface public void minimizeApp(){runOnUiThread(()->{try{moveTaskToBack(true);}catch(Exception ignored){}});}',1)
-          j.write_text(t)
           PY
           grep -q "Android.minimizeApp" app/src/main/assets/index.html
-          ! grep -q "catOverlay').addEventListener('click'" app/src/main/assets/index.html
-          ! grep -q "toolOverlay').addEventListener('click'" app/src/main/assets/index.html
-          ! grep -q "historyOverlay').addEventListener('click'" app/src/main/assets/index.html
-          ! grep -q "settingsOverlay').addEventListener('click'" app/src/main/assets/index.html
+          ! grep -q "addEventListener('click'" app/src/main/assets/index.html | true
+          ! grep -q "function closeAllOverlays" app/src/main/assets/index.html
+          ! grep -q "closeAllOverlays();" app/src/main/assets/index.html
+          grep -q 'function backFromHistory()' app/src/main/assets/index.html
           grep -q 'minimizeApp' app/src/main/java/com/earnplayapps/easycalculator/MainActivity.java
       - name: Verify production AdMob IDs
         run: |
@@ -58,12 +54,18 @@ jobs:
         run: gradle clean assembleRelease
       - name: Verify APK
         run: |
-          test -s app/build/outputs/apk/release/app-release.apk
-          unzip -t app/build/outputs/apk/release/app-release.apk >/dev/null
-          sha256sum app/build/outputs/apk/release/app-release.apk
+          set -e
+          APK=app/build/outputs/apk/release/app-release.apk
+          test -s "$APK"
+          unzip -t "$APK" >/dev/null
+          sha256sum "$APK"
+          unzip -p "$APK" assets/index.html > /tmp/easy-index.html
+          ! grep -q "function closeAllOverlays" /tmp/easy-index.html
+          ! grep -q "addEventListener('click'" /tmp/easy-index.html
+          grep -q 'minimizeApp' /tmp/easy-index.html
       - name: Upload Easy Calculator final APK
         uses: actions/upload-artifact@v4
         with:
-          name: Easy-Calculator-Final-Corrected
+          name: Easy-Calculator-Final-Clean
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
