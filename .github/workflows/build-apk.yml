@@ -86,3 +86,5 @@ jobs:
           name: Easy-Calculator-Personal-AdMob
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
+
+      # Release rebuild requested for Easy Calculator AdMob Release.
